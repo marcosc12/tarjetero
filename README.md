@@ -19,7 +19,7 @@ npm run dev
 Crea `.env.local` en la raíz:
 
 ```dotenv
-NEXT_PUBLIC_SUPABASE_URL=https://mhmjvjyoiwmkhxajmqf.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://mhmjvjyoiwmjkhxajmqf.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_REEMPLAZA_CON_TU_PUBLISHABLE_KEY
 ```
 
@@ -33,7 +33,7 @@ En Supabase SQL Editor, ejecuta el contenido de `supabase/policies.sql`. El scri
 
 En **Project Settings → Environment Variables**, agrega para Production, Preview y Development:
 
-- `NEXT_PUBLIC_SUPABASE_URL` = `https://mhmjvjyoiwmkhxajmqf.supabase.co`
+- `NEXT_PUBLIC_SUPABASE_URL` = `https://mhmjvjyoiwmjkhxajmqf.supabase.co`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = tu Publishable Key de Supabase
 
 Vuelve a desplegar una vez para que Next.js incluya las variables `NEXT_PUBLIC_` en el bundle. Los cambios posteriores a los registros de tarjetas se aplican directamente desde Supabase, sin otro despliegue.
