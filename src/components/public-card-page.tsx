@@ -99,7 +99,10 @@ export function PublicCardPage() {
           setStatus("error");
         }}
       />
-      <main className="public-card-page">
+      <main
+        className="public-card-page"
+        style={{ backgroundColor: tarjeta?.color_fondo || undefined }}
+      >
         <div className="public-card-shell profile-enter">
           {status === "ready" && tarjeta ? (
             <>

@@ -29,6 +29,8 @@ En Supabase SQL Editor, ejecuta el contenido de `supabase/policies.sql`. El scri
 
 **Importante:** esta configuración permite modificar tarjetas a cualquier usuario que pueda iniciar sesión en este proyecto Supabase. Desactiva el registro público de usuarios en Supabase Auth y crea/invita únicamente las cuentas de confianza. No habilites escrituras para `anon`.
 
+Para habilitar el avatar, los colores y enlaces personalizados del panel, ejecuta también `supabase/extend-tarjetas.sql` en SQL Editor. Esta migración agrega columnas opcionales sin borrar ni renombrar los campos actuales; WhatsApp, Instagram y ubicación se siguen sincronizando con sus columnas existentes.
+
 ## Vercel
 
 En **Project Settings → Environment Variables**, agrega para Production, Preview y Development:

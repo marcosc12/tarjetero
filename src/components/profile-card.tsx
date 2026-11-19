@@ -1,10 +1,17 @@
 import type { CSSProperties, ReactNode } from "react";
+import Image from "next/image";
 
 export type Tarjeta = {
   slug: string;
   nombre: string | null;
   eslogan: string | null;
   inicial: string | null;
+  avatar_url?: string | null;
+  color_fondo?: string | null;
+  color_tarjeta?: string | null;
+  color_boton?: string | null;
+  color_texto?: string | null;
+  links?: TarjetaLink[] | null;
   whatsapp: string | null;
   whatsapp_sub: string | null;
   instagram: string | null;
@@ -12,6 +19,14 @@ export type Tarjeta = {
   ubicacion_url: string | null;
   ubicacion_sub: string | null;
   activo: boolean;
+};
+
+export type TarjetaLink = {
+  id: string;
+  tipo: "whatsapp" | "instagram" | "maps" | "web" | "phone";
+  titulo: string;
+  subtitulo: string;
+  url: string;
 };
 
 function safeHttpUrl(value: string) {
@@ -23,7 +38,7 @@ function safeHttpUrl(value: string) {
   }
 }
 
-function actionUrl(value: string | null, kind: "whatsapp" | "instagram" | "maps") {
+function actionUrl(value: string | null, kind: TarjetaLink["tipo"]) {
   const cleanValue = value?.trim() ?? "";
   if (!cleanValue) return "";
   const absoluteUrl = safeHttpUrl(cleanValue);
@@ -36,10 +51,17 @@ function actionUrl(value: string | null, kind: "whatsapp" | "instagram" | "maps"
   if (kind === "instagram") {
     return absoluteUrl || `https://www.instagram.com/${cleanValue.replace(/^@/, "")}`;
   }
-  return absoluteUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanValue)}`;
+  if (kind === "maps") {
+    return absoluteUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanValue)}`;
+  }
+  if (kind === "phone") {
+    const phone = cleanValue.replace(/[^\d+]/g, "");
+    return phone ? `tel:${phone}` : "";
+  }
+  return absoluteUrl || `https://${cleanValue}`;
 }
 
-function ActionIcon({ kind }: { kind: "whatsapp" | "instagram" | "maps" }) {
+function ActionIcon({ kind }: { kind: TarjetaLink["tipo"] }) {
   const common = {
     "aria-hidden": true as const,
     viewBox: "0 0 24 24",
@@ -64,6 +86,14 @@ function ActionIcon({ kind }: { kind: "whatsapp" | "instagram" | "maps" }) {
       </svg>
     );
   }
+  if (kind === "web" || kind === "phone") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M3.8 12h16.4M12 3.5a13 13 0 0 1 0 17M12 3.5a13 13 0 0 0 0 17" stroke="currentColor" strokeWidth="1.4" />
+      </svg>
+    );
+  }
   return (
     <svg {...common}>
       <path d="M19 10.2c0 5-7 10.3-7 10.3S5 15.2 5 10.2a7 7 0 1 1 14 0Z" stroke="currentColor" strokeWidth="1.7" />
@@ -79,7 +109,7 @@ function CardAction({
   value,
   buttonColor,
 }: {
-  kind: "whatsapp" | "instagram" | "maps";
+  kind: TarjetaLink["tipo"];
   title: string;
   subtitle: string | null;
   value: string | null;
@@ -129,51 +159,70 @@ function CardAction({
 }
 
 export function ProfileCard({ tarjeta }: { tarjeta: Tarjeta }) {
-  const buttonColor = "#202a24";
+  const buttonColor = tarjeta.color_boton || "#202a24";
+  const textColor = tarjeta.color_texto || "#202b23";
   const initial = (tarjeta.inicial?.trim() || tarjeta.nombre?.trim().charAt(0) || "N")
     .charAt(0)
     .toLocaleUpperCase("es");
+  const avatarUrl = tarjeta.avatar_url ? safeHttpUrl(tarjeta.avatar_url) : "";
+  const legacyLinks: TarjetaLink[] = [
+    { id: "whatsapp", tipo: "whatsapp", titulo: "WhatsApp", subtitulo: tarjeta.whatsapp_sub || "", url: tarjeta.whatsapp || "" },
+    { id: "instagram", tipo: "instagram", titulo: "Instagram", subtitulo: tarjeta.instagram_sub || "", url: tarjeta.instagram || "" },
+    { id: "ubicacion", tipo: "maps", titulo: "Cómo llegar", subtitulo: tarjeta.ubicacion_sub || "", url: tarjeta.ubicacion_url || "" },
+  ];
+  const links = tarjeta.links ?? legacyLinks;
 
   return (
-    <section className="public-profile-card w-full overflow-hidden rounded-[2rem] border border-white/75 bg-white p-7 text-center shadow-[0_24px_80px_rgba(31,41,33,0.12)] backdrop-blur-sm sm:p-9">
-      <div
-        aria-label={`Inicial de ${tarjeta.nombre || "negocio"}`}
-        className="profile-avatar mx-auto grid h-24 w-24 place-items-center rounded-full border-4 border-white text-3xl font-semibold text-white shadow-[0_5px_20px_rgba(20,30,20,0.15)]"
-        style={{ backgroundColor: buttonColor }}
-      >
-        {initial}
-      </div>
-      <h1 className="profile-card-title mt-5 text-[1.7rem] font-semibold tracking-[-0.055em] text-[#202b23]">
+    <section
+      className="public-profile-card w-full overflow-hidden rounded-[2rem] border border-white/75 p-7 text-center shadow-[0_24px_80px_rgba(31,41,33,0.12)] backdrop-blur-sm sm:p-9"
+      style={{
+        backgroundColor: tarjeta.color_tarjeta || "#ffffff",
+        color: textColor,
+      }}
+    >
+      {avatarUrl ? (
+        <Image
+          src={avatarUrl}
+          alt={`Avatar de ${tarjeta.nombre || "negocio"}`}
+          width={96}
+          height={96}
+          unoptimized
+          className="profile-avatar mx-auto object-cover"
+        />
+      ) : (
+        <div
+          aria-label={`Inicial de ${tarjeta.nombre || "negocio"}`}
+          className="profile-avatar mx-auto grid place-items-center text-3xl font-semibold text-white"
+          style={{ backgroundColor: buttonColor }}
+        >
+          {initial}
+        </div>
+      )}
+      <h1 className="profile-card-title mt-5 text-[1.7rem] font-semibold tracking-[-0.055em]" style={{ color: textColor }}>
         {tarjeta.nombre || "Nombre del negocio"}
       </h1>
       {tarjeta.eslogan && (
-        <p className="profile-card-tagline mx-auto mt-2 max-w-xs text-sm leading-6 text-[#788078]">
+        <p className="profile-card-tagline mx-auto mt-2 max-w-xs text-sm leading-6" style={{ color: textColor, opacity: 0.72 }}>
           {tarjeta.eslogan}
         </p>
       )}
       {tarjeta.activo === true ? (
         <div className="mt-7 space-y-3">
-          <CardAction
-            kind="whatsapp"
-            title="WhatsApp"
-            subtitle={tarjeta.whatsapp_sub}
-            value={tarjeta.whatsapp}
-            buttonColor={buttonColor}
-          />
-          <CardAction
-            kind="instagram"
-            title="Instagram"
-            subtitle={tarjeta.instagram_sub}
-            value={tarjeta.instagram}
-            buttonColor={buttonColor}
-          />
-          <CardAction
-            kind="maps"
-            title="Cómo llegar"
-            subtitle={tarjeta.ubicacion_sub}
-            value={tarjeta.ubicacion_url}
-            buttonColor={buttonColor}
-          />
+          {links.filter((link) => link.url.trim()).map((link) => (
+            <CardAction
+              key={link.id}
+              kind={link.tipo}
+              title={link.titulo || "Enlace"}
+              subtitle={link.subtitulo || null}
+              value={link.url}
+              buttonColor={buttonColor}
+            />
+          ))}
+          {links.every((link) => !link.url.trim()) && (
+            <p className="rounded-2xl bg-[#f5f6f4] px-5 py-4 text-sm text-[#737d74]">
+              Esta tarjeta aún no tiene enlaces disponibles.
+            </p>
+          )}
         </div>
       ) : (
         <div className="card-suspended mt-7 rounded-2xl border border-[#f0e5e8] bg-[#fbf6f7] px-5 py-4 text-sm leading-6 text-[#806b70]">
