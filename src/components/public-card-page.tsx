@@ -2,14 +2,22 @@
 
 import Script from "next/script";
 import { useEffect, useState } from "react";
-import { ProfileCard, ProfileFooter, type Tarjeta } from "@/components/profile-card";
+import {
+  ProfileCard,
+  ProfileFooter,
+  type MenuProduct,
+  type MenuPromotion,
+  type Tarjeta,
+} from "@/components/profile-card";
 import { SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase-browser";
+import type { MenuProductRecord, MenuPromotionRecord } from "@/lib/supabase-browser";
 
 export function PublicCardPage() {
   const [sdkReady, setSdkReady] = useState(false);
   const [tarjeta, setTarjeta] = useState<Tarjeta | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "not-found" | "error">("loading");
   const [errorDetail, setErrorDetail] = useState("");
+  const [menuView, setMenuView] = useState(false);
 
   useEffect(() => {
     if (status !== "loading") return;
@@ -24,7 +32,10 @@ export function PublicCardPage() {
     if (!sdkReady) return;
 
     let active = true;
-    const slug = new URLSearchParams(window.location.search).get("c") || "cafe-esquina";
+    let timedOut = false;
+    const searchParams = new URLSearchParams(window.location.search);
+    const slug = searchParams.get("c") || "cafe-esquina";
+    const showMenu = searchParams.get("view") === "menu";
     const fail = (message: string) => {
       if (!active) return;
       setErrorDetail(message);
@@ -51,6 +62,7 @@ export function PublicCardPage() {
     }
 
     const requestTimeout = window.setTimeout(() => {
+      timedOut = true;
       fail("La consulta tardó más de 10 segundos. Revisa la conexión a Supabase.");
     }, 10000);
 
@@ -59,10 +71,10 @@ export function PublicCardPage() {
       .select("*")
       .eq("slug", slug)
       .maybeSingle()
-      .then(({ data, error }) => {
-        if (!active) return;
-        if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
+      .then(async ({ data, error }) => {
+        if (!active || timedOut) return;
         if (error) {
+            if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
             const errorInfo = [
             error.code ? `Código: ${error.code}` : "",
             error.message ? `Mensaje: ${error.message}` : "",
@@ -72,8 +84,64 @@ export function PublicCardPage() {
           fail(errorInfo.join(" · ") || "Supabase devolvió un error sin descripción.");
           return;
         }
-        setTarjeta(data);
-        setStatus(data ? "ready" : "not-found");
+        if (!data) {
+          if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
+          setTarjeta(null);
+          setStatus("not-found");
+          return;
+        }
+
+        const [productsResult, promotionsResult] = await Promise.all([
+          client
+            .from("menu_productos")
+            .select("*")
+            .eq("tarjeta_slug", slug)
+            .eq("activo", true)
+            .order("orden", { ascending: true }),
+          client
+            .from("menu_promociones")
+            .select("*")
+            .eq("tarjeta_slug", slug)
+            .eq("activo", true)
+            .order("created_at", { ascending: true }),
+        ]);
+        if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
+        if (!active || timedOut) return;
+        if (productsResult.error || promotionsResult.error || !productsResult.data || !promotionsResult.data) {
+          const menuError = productsResult.error?.message || promotionsResult.error?.message || "Respuesta incompleta al cargar el menú.";
+          fail(`No se pudo cargar el menú: ${menuError}`);
+          return;
+        }
+
+        const products: MenuProduct[] = productsResult.data.map((product: MenuProductRecord) => ({
+          id: String(product.id),
+          key: String(product.id),
+          imageUrl: product.imagen_url ?? "",
+          name: product.producto,
+          price: String(product.precio ?? ""),
+          description: product.descripcion ?? "",
+          category: product.categoria ?? "",
+          active: product.activo,
+          order: product.orden,
+          onPromotion: product.en_promocion === true,
+          promotionPrice: product.precio_promocion == null ? "" : String(product.precio_promocion),
+          promotionLabel: product.etiqueta_promocion ?? "",
+        }));
+        const promotions: MenuPromotion[] = promotionsResult.data.map((promotion: MenuPromotionRecord) => ({
+          id: String(promotion.id),
+          key: String(promotion.id),
+          title: promotion.titulo,
+          discount: String(promotion.descuento ?? ""),
+          description: promotion.descripcion ?? "",
+          previousPrice: promotion.precio_anterior == null ? "" : String(promotion.precio_anterior),
+          price: promotion.precio == null ? "" : String(promotion.precio),
+          imageUrl: promotion.imagen_url ?? "",
+          validity: promotion.vigencia ?? "",
+          active: promotion.activo,
+        }));
+        setMenuView(showMenu);
+        setTarjeta({ ...data, products, promotions });
+        setStatus("ready");
       })
       .catch((error: unknown) => {
         if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
@@ -106,7 +174,7 @@ export function PublicCardPage() {
         <div className="public-card-shell profile-enter">
           {status === "ready" && tarjeta ? (
             <>
-              <ProfileCard tarjeta={tarjeta} />
+              <ProfileCard tarjeta={tarjeta} menuView={menuView} />
               <ProfileFooter />
             </>
           ) : status === "loading" ? (
