@@ -263,12 +263,36 @@ a {
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 640px) {
   .public-card-page {
-    padding: 1.25rem 1rem;
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: 0;
   }
 
+  .public-card-shell {
+    max-width: none;
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+
+  .public-profile-card {
+    min-height: 100vh;
+    min-height: 100svh;
+    border: 0;
+    border-radius: 0;
+    padding: clamp(1.5rem, 7vw, 2.25rem);
+    box-shadow: none;
+  }
+
+  .card-message,
   .card-skeleton {
-    padding: 1.5rem;
+    min-height: 100vh;
+    min-height: 100svh;
+    align-content: center;
+    border: 0;
+    border-radius: 0;
+    padding: clamp(1.5rem, 7vw, 2rem);
+    box-shadow: none;
   }
 }
