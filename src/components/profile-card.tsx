@@ -304,17 +304,26 @@ export function ProfileCard({
   }
 
   function renderProduct(product: MenuProduct) {
+    const imageUrl = product.imageUrl ? safeHttpUrl(product.imageUrl) : "";
+
     return (
-      <article key={product.key} className="flex items-center gap-3 rounded-2xl bg-black/[0.035] p-3">
-        {product.imageUrl && safeHttpUrl(product.imageUrl) ? (
-          <Image src={safeHttpUrl(product.imageUrl)} alt={product.name || "Producto"} width={80} height={80} unoptimized className="h-20 w-20 shrink-0 rounded-xl object-cover" />
-        ) : (
-          <div aria-hidden="true" className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-black/[0.06] text-base font-medium opacity-60">Imagen</div>
-        )}
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-lg font-semibold">{product.name || "Producto"}</h3>
-          {product.description.trim() && <p className="mt-1 text-base leading-6 opacity-75">{product.description}</p>}
-          {product.price && <p className="mt-1 text-lg font-bold text-neutral-900">${product.price}</p>}
+      <article key={product.key} className="overflow-hidden rounded-2xl bg-black/[0.035]">
+        <div className="relative aspect-video w-full bg-black/[0.06]">
+          {imageUrl && (
+            <Image
+              src={imageUrl}
+              alt={product.name}
+              fill
+              sizes="(max-width: 640px) 100vw, 24rem"
+              unoptimized
+              className="object-cover"
+            />
+          )}
+        </div>
+        <div className="grid gap-1 p-4">
+          <h3 className="break-words text-lg font-semibold leading-snug">{product.name}</h3>
+          {product.description.trim() && <p className="text-base leading-6 opacity-75">{product.description}</p>}
+          {product.price && <p className="text-lg font-bold text-neutral-900">${product.price}</p>}
         </div>
       </article>
     );
