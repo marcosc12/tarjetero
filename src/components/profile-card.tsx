@@ -241,6 +241,7 @@ export function ProfileCard({
   const products = tarjeta.products ?? [];
   const promotions = tarjeta.promotions ?? [];
   const [productPageState, setProductPageState] = useState({ slug: tarjeta.slug, page: 1 });
+  const [categoryFilterState, setCategoryFilterState] = useState({ slug: tarjeta.slug, category: "all" });
   const [indicePromo, setIndicePromo] = useState(0);
   const [promoTimerReset, setPromoTimerReset] = useState(0);
   const [lightboxItem, setLightboxItem] = useState<CarouselItem | null>(null);
@@ -251,11 +252,30 @@ export function ProfileCard({
   const showMenuButton = tarjeta.mostrar_menu !== false && hasActiveMenu;
   const menuHref = `/?c=${encodeURIComponent(tarjeta.slug)}&view=menu`;
   const visibleProducts = products.filter((product) => previewMode || product.active);
-  const productPageCount = Math.max(1, Math.ceil(visibleProducts.length / PRODUCTS_PER_PAGE));
+  const categoryOptions = Array.from(
+    visibleProducts.reduce((categories, product) => {
+      const name = product.category.trim().replace(/\s+/g, " ");
+      const key = normalizeCategory(name);
+      if (key && !categories.has(key)) categories.set(key, name);
+      return categories;
+    }, new Map<string, string>()),
+    ([key, name]) => ({ key, name }),
+  );
+  const requestedCategory =
+    categoryFilterState.slug === tarjeta.slug ? categoryFilterState.category : "all";
+  const selectedCategory =
+    requestedCategory === "all" || categoryOptions.some(({ key }) => key === requestedCategory)
+      ? requestedCategory
+      : "all";
+  const filteredProducts =
+    selectedCategory === "all"
+      ? visibleProducts
+      : visibleProducts.filter((product) => normalizeCategory(product.category) === selectedCategory);
+  const productPageCount = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
   const currentProductPage = productPageState.slug === tarjeta.slug
     ? Math.min(productPageState.page, productPageCount)
     : 1;
-  const paginatedProducts = visibleProducts.slice(
+  const paginatedProducts = filteredProducts.slice(
     (currentProductPage - 1) * PRODUCTS_PER_PAGE,
     currentProductPage * PRODUCTS_PER_PAGE,
   );
@@ -565,6 +585,30 @@ export function ProfileCard({
       )}
       {menuView && visibleProducts.length > 0 && (
         <div ref={productsSectionRef} className="mt-7 scroll-mt-5 text-left">
+          <nav aria-label="Filtrar productos por categoría" className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[{ key: "all", name: "Todos" }, ...categoryOptions].map(({ key, name }) => {
+              const isSelected = selectedCategory === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    setCategoryFilterState({ slug: tarjeta.slug, category: key });
+                    setProductPageState({ slug: tarjeta.slug, page: 1 });
+                  }}
+                  className={`min-w-0 rounded-xl border px-2 py-2.5 text-sm font-semibold leading-tight break-words transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                    isSelected
+                      ? "border-transparent text-white"
+                      : "border-current/15 bg-white/70"
+                  }`}
+                  style={isSelected ? { backgroundColor: buttonColor, color: "#ffffff" } : undefined}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </nav>
           <h2 className="mb-3 text-lg font-semibold" style={{ color: textColor }}>Productos</h2>
           <div className="grid gap-3">
             {paginatedProducts.filter((product) => !product.category.trim()).map(renderProduct)}
@@ -577,7 +621,7 @@ export function ProfileCard({
               </section>
             ))}
           </div>
-          {visibleProducts.length > PRODUCTS_PER_PAGE && (
+          {filteredProducts.length > PRODUCTS_PER_PAGE && (
             <nav aria-label="Paginación de productos" className="mt-4 flex items-center justify-center gap-2 text-sm">
               <button
                 type="button"
