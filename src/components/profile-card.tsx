@@ -63,7 +63,7 @@ export type MenuPromotion = {
 
 export type TarjetaLink = {
   id: string;
-  tipo: "whatsapp" | "instagram" | "maps" | "web" | "phone";
+  tipo: "whatsapp" | "instagram" | "maps" | "web" | "phone" | "reviews";
   titulo: string;
   subtitulo: string;
   url: string;
@@ -107,6 +107,7 @@ function actionUrl(value: string | null, kind: TarjetaLink["tipo"]) {
     const phone = cleanValue.replace(/[^\d+]/g, "");
     return phone ? `tel:${phone}` : "";
   }
+  if (kind === "reviews") return absoluteUrl || `https://${cleanValue}`;
   return absoluteUrl || `https://${cleanValue}`;
 }
 
@@ -132,6 +133,13 @@ function ActionIcon({ kind }: { kind: TarjetaLink["tipo"] }) {
         <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="currentColor" strokeWidth="1.7" />
         <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.7" />
         <circle cx="17.6" cy="6.6" r="1.1" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (kind === "reviews") {
+    return (
+      <svg {...common}>
+        <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       </svg>
     );
   }

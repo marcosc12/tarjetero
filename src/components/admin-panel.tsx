@@ -81,7 +81,7 @@ function cardLinks(card: Tarjeta): TarjetaLink[] {
           Boolean(link) &&
           typeof link.id === "string" &&
           typeof link.url === "string" &&
-          ["whatsapp", "instagram", "maps", "web", "phone"].includes(link.tipo),
+          ["whatsapp", "instagram", "maps", "web", "phone", "reviews"].includes(link.tipo),
       )
       .map((link) => ({ ...link }));
   }
@@ -1342,6 +1342,7 @@ export function AdminPanel() {
                               <option value="maps">Cómo llegar</option>
                               <option value="web">Sitio web / enlace</option>
                               <option value="phone">Teléfono</option>
+                              <option value="reviews">Reseñas</option>
                             </select>
                           </label>
                           <label className={labelClass}>Título<input value={link.titulo} onChange={(event) => updateLink(link.id, "titulo", event.target.value)} placeholder="Mi enlace" className={inputClass} /></label>
