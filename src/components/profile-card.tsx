@@ -20,6 +20,7 @@ export type Tarjeta = {
   color_boton?: string | null;
   color_texto?: string | null;
   mostrar_menu?: boolean | null;
+  hasActiveMenu?: boolean;
   links?: TarjetaLink[] | null;
   products?: MenuProduct[] | null;
   promotions?: MenuPromotion[] | null;
@@ -210,10 +211,12 @@ export function ProfileCard({
   tarjeta,
   previewMode = false,
   menuView = false,
+  menuLoading = false,
 }: {
   tarjeta: Tarjeta;
   previewMode?: boolean;
   menuView?: boolean;
+  menuLoading?: boolean;
 }) {
   const buttonColor = tarjeta.color_boton || "#202a24";
   const textColor = tarjeta.color_texto || "#202b23";
@@ -234,7 +237,9 @@ export function ProfileCard({
   const [promoTimerReset, setPromoTimerReset] = useState(0);
   const [lightboxItem, setLightboxItem] = useState<CarouselItem | null>(null);
   const productsSectionRef = useRef<HTMLDivElement>(null);
-  const hasActiveMenu = products.some((product) => product.active) || promotions.some((promotion) => promotion.active);
+  const hasActiveMenu =
+    tarjeta.hasActiveMenu ??
+    (products.some((product) => product.active) || promotions.some((promotion) => promotion.active));
   const showMenuButton = tarjeta.mostrar_menu !== false && hasActiveMenu;
   const menuHref = `/?c=${encodeURIComponent(tarjeta.slug)}&view=menu`;
   const visibleProducts = products.filter((product) => previewMode || product.active);
@@ -315,6 +320,7 @@ export function ProfileCard({
               alt={product.name}
               fill
               sizes="(max-width: 640px) 100vw, 24rem"
+              loading="lazy"
               unoptimized
               className="object-cover"
             />
@@ -552,7 +558,7 @@ export function ProfileCard({
       {menuView && visibleProducts.length > 0 && (
         <div ref={productsSectionRef} className="mt-7 scroll-mt-5 text-left">
           <h2 className="mb-3 text-lg font-semibold" style={{ color: textColor }}>Productos</h2>
-          <div className="grid max-h-[55vh] gap-3 overflow-y-auto overscroll-contain pr-1">
+          <div className="grid gap-3">
             {paginatedProducts.filter((product) => !product.category.trim()).map(renderProduct)}
             {groupedProducts.map(([key, group]) => (
               <section key={key} aria-label={group.name} className="mt-2 grid gap-3">
@@ -588,6 +594,11 @@ export function ProfileCard({
             </nav>
           )}
         </div>
+      )}
+      {menuView && menuLoading && visibleProducts.length === 0 && (
+        <p role="status" className="mt-7 text-left text-sm opacity-70">
+          Cargando productos...
+        </p>
       )}
     </section>
     {lightboxItem && typeof document !== "undefined" && createPortal(

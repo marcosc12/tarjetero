@@ -40,6 +40,7 @@ export type MenuPromotionRecord = {
 };
 type MenuQuery<T> = {
   eq: (column: string, value: string | number | boolean) => MenuQuery<T>;
+  limit: (count: number) => Promise<SupabaseResponse<T[]>>;
   order: (
     column: string,
     options: { ascending: boolean },

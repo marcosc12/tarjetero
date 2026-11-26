@@ -18,6 +18,7 @@ export function PublicCardPage() {
   const [status, setStatus] = useState<"loading" | "ready" | "not-found" | "error">("loading");
   const [errorDetail, setErrorDetail] = useState("");
   const [menuView, setMenuView] = useState(false);
+  const [menuLoading, setMenuLoading] = useState(false);
 
   useEffect(() => {
     if (status !== "loading") return;
@@ -68,14 +69,16 @@ export function PublicCardPage() {
 
     client
       .from("tarjetas")
-      .select("*")
+      .select(
+        "slug,nombre,eslogan,inicial,avatar_url,color_fondo,color_tarjeta,color_boton,color_texto,mostrar_menu,links,whatsapp,whatsapp_sub,instagram,instagram_sub,ubicacion_url,ubicacion_sub,activo",
+      )
       .eq("slug", slug)
       .maybeSingle()
       .then(async ({ data, error }) => {
         if (!active || timedOut) return;
         if (error) {
-            if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
-            const errorInfo = [
+          if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
+          const errorInfo = [
             error.code ? `Código: ${error.code}` : "",
             error.message ? `Mensaje: ${error.message}` : "",
             error.details ? `Detalle: ${error.details}` : "",
@@ -91,57 +94,113 @@ export function PublicCardPage() {
           return;
         }
 
-        const [productsResult, promotionsResult] = await Promise.all([
-          client
-            .from("menu_productos")
-            .select("*")
-            .eq("tarjeta_slug", slug)
-            .eq("activo", true)
-            .order("orden", { ascending: true }),
-          client
-            .from("menu_promociones")
-            .select("*")
-            .eq("tarjeta_slug", slug)
-            .eq("activo", true)
-            .order("created_at", { ascending: true }),
-        ]);
-        if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
-        if (!active || timedOut) return;
-        if (productsResult.error || promotionsResult.error || !productsResult.data || !promotionsResult.data) {
-          const menuError = productsResult.error?.message || promotionsResult.error?.message || "Respuesta incompleta al cargar el menú.";
-          fail(`No se pudo cargar el menú: ${menuError}`);
-          return;
-        }
-
-        const products: MenuProduct[] = productsResult.data.map((product: MenuProductRecord) => ({
-          id: String(product.id),
-          key: String(product.id),
-          imageUrl: product.imagen_url ?? "",
-          name: product.producto,
-          price: String(product.precio ?? ""),
-          description: product.descripcion ?? "",
-          category: product.categoria ?? "",
-          active: product.activo,
-          order: product.orden,
-          onPromotion: product.en_promocion === true,
-          promotionPrice: product.precio_promocion == null ? "" : String(product.precio_promocion),
-          promotionLabel: product.etiqueta_promocion ?? "",
-        }));
-        const promotions: MenuPromotion[] = promotionsResult.data.map((promotion: MenuPromotionRecord) => ({
-          id: String(promotion.id),
-          key: String(promotion.id),
-          title: promotion.titulo,
-          discount: String(promotion.descuento ?? ""),
-          description: promotion.descripcion ?? "",
-          previousPrice: promotion.precio_anterior == null ? "" : String(promotion.precio_anterior),
-          price: promotion.precio == null ? "" : String(promotion.precio),
-          imageUrl: promotion.imagen_url ?? "",
-          validity: promotion.vigencia ?? "",
-          active: promotion.activo,
-        }));
         setMenuView(showMenu);
-        setTarjeta({ ...data, products, promotions });
+        setTarjeta({
+          ...data,
+          products: [],
+          promotions: [],
+          hasActiveMenu: false,
+        });
         setStatus("ready");
+
+        if (showMenu) {
+          setMenuLoading(true);
+          const [productsResult, promotionsResult] = await Promise.all([
+            client
+              .from("menu_productos")
+              .select(
+                "id,producto,precio,descripcion,categoria,imagen_url,activo,orden,en_promocion,precio_promocion,etiqueta_promocion",
+              )
+              .eq("tarjeta_slug", slug)
+              .eq("activo", true)
+              .order("orden", { ascending: true }),
+            client
+              .from("menu_promociones")
+              .select(
+                "id,titulo,descuento,descripcion,precio_anterior,precio,imagen_url,vigencia,activo",
+              )
+              .eq("tarjeta_slug", slug)
+              .eq("activo", true)
+              .order("created_at", { ascending: true }),
+          ]);
+          if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
+          if (!active || timedOut) return;
+          if (productsResult.error || promotionsResult.error || !productsResult.data || !promotionsResult.data) {
+            const menuError = productsResult.error?.message || promotionsResult.error?.message || "Respuesta incompleta al cargar el menú.";
+            fail(`No se pudo cargar el menú: ${menuError}`);
+            return;
+          }
+
+          const products: MenuProduct[] = productsResult.data.map((product: MenuProductRecord) => ({
+            id: String(product.id),
+            key: String(product.id),
+            imageUrl: product.imagen_url ?? "",
+            name: product.producto,
+            price: String(product.precio ?? ""),
+            description: product.descripcion ?? "",
+            category: product.categoria ?? "",
+            active: product.activo,
+            order: product.orden,
+            onPromotion: product.en_promocion === true,
+            promotionPrice: product.precio_promocion == null ? "" : String(product.precio_promocion),
+            promotionLabel: product.etiqueta_promocion ?? "",
+          }));
+          const promotions: MenuPromotion[] = promotionsResult.data.map((promotion: MenuPromotionRecord) => ({
+            id: String(promotion.id),
+            key: String(promotion.id),
+            title: promotion.titulo,
+            discount: String(promotion.descuento ?? ""),
+            description: promotion.descripcion ?? "",
+            previousPrice: promotion.precio_anterior == null ? "" : String(promotion.precio_anterior),
+            price: promotion.precio == null ? "" : String(promotion.precio),
+            imageUrl: promotion.imagen_url ?? "",
+            validity: promotion.vigencia ?? "",
+            active: promotion.activo,
+          }));
+          setTarjeta((current) =>
+            current
+              ? {
+                  ...current,
+                  products,
+                  promotions,
+                  hasActiveMenu: products.length > 0 || promotions.length > 0,
+                }
+              : current,
+          );
+          setMenuLoading(false);
+        } else if (data.mostrar_menu !== false) {
+          const [productsResult, promotionsResult] = await Promise.all([
+            client
+              .from("menu_productos")
+              .select("id")
+              .eq("tarjeta_slug", slug)
+              .eq("activo", true)
+              .limit(1),
+            client
+              .from("menu_promociones")
+              .select("id")
+              .eq("tarjeta_slug", slug)
+              .eq("activo", true)
+              .limit(1),
+          ]);
+          if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
+          if (!active || timedOut) return;
+          if (productsResult.error || promotionsResult.error || !productsResult.data || !promotionsResult.data) {
+            const menuError = productsResult.error?.message || promotionsResult.error?.message || "Respuesta incompleta al comprobar el menú.";
+            fail(`No se pudo cargar el menú: ${menuError}`);
+            return;
+          }
+          setTarjeta((current) =>
+            current
+              ? {
+                  ...current,
+                  hasActiveMenu: productsResult.data.length > 0 || promotionsResult.data.length > 0,
+                }
+              : current,
+          );
+        } else if (requestTimeout !== undefined) {
+          window.clearTimeout(requestTimeout);
+        }
       })
       .catch((error: unknown) => {
         if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
@@ -174,7 +233,7 @@ export function PublicCardPage() {
         <div className="public-card-shell profile-enter">
           {status === "ready" && tarjeta ? (
             <>
-              <ProfileCard tarjeta={tarjeta} menuView={menuView} />
+              <ProfileCard tarjeta={tarjeta} menuView={menuView} menuLoading={menuLoading} />
               <ProfileFooter />
             </>
           ) : status === "loading" ? (
