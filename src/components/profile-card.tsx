@@ -307,14 +307,14 @@ export function ProfileCard({
     return (
       <article key={product.key} className="flex items-center gap-3 rounded-2xl bg-black/[0.035] p-3">
         {product.imageUrl && safeHttpUrl(product.imageUrl) ? (
-          <Image src={safeHttpUrl(product.imageUrl)} alt={product.name || "Producto"} width={64} height={64} unoptimized className="h-16 w-16 shrink-0 rounded-xl object-cover" />
+          <Image src={safeHttpUrl(product.imageUrl)} alt={product.name || "Producto"} width={80} height={80} unoptimized className="h-20 w-20 shrink-0 rounded-xl object-cover" />
         ) : (
-          <div aria-hidden="true" className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-black/[0.06] text-xs opacity-60">Imagen</div>
+          <div aria-hidden="true" className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-black/[0.06] text-base font-medium opacity-60">Imagen</div>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold">{product.name || "Producto"}</h3>
-          {product.description.trim() && <p className="mt-1 text-sm leading-5 opacity-75">{product.description}</p>}
-          {product.price && <p className="mt-1 text-base font-bold text-neutral-900">${product.price}</p>}
+          <h3 className="truncate text-lg font-semibold">{product.name || "Producto"}</h3>
+          {product.description.trim() && <p className="mt-1 text-base leading-6 opacity-75">{product.description}</p>}
+          {product.price && <p className="mt-1 text-lg font-bold text-neutral-900">${product.price}</p>}
         </div>
       </article>
     );
@@ -358,7 +358,7 @@ export function ProfileCard({
       {menuView ? (
         <a
           href={`/?c=${encodeURIComponent(tarjeta.slug)}`}
-          className="mt-7 inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-3 text-base font-medium text-white shadow-[0_8px_18px_rgba(20,30,20,0.12)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(20,30,20,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3"
+          className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl px-6 py-3 text-lg font-semibold text-white shadow-[0_8px_18px_rgba(20,30,20,0.12)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(20,30,20,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3"
           style={{ backgroundColor: buttonColor }}
         >
           ← Volver
@@ -424,7 +424,7 @@ export function ProfileCard({
                       setLightboxItem(currentPromo);
                     }
                   }}
-                  className="relative h-[210px] w-full cursor-pointer overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(20,30,20,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="relative h-[240px] w-full cursor-pointer overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(20,30,20,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{ backgroundColor: currentPromo.item.imageUrl && safeHttpUrl(currentPromo.item.imageUrl) ? "#202a24" : buttonColor }}
                 >
                 {currentPromo.item.imageUrl && safeHttpUrl(currentPromo.item.imageUrl) && (
@@ -453,12 +453,12 @@ export function ProfileCard({
                     {currentPromo.kind === "promotion" ? (
                       <>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="line-clamp-1 min-w-0 flex-1 break-words text-base font-bold sm:text-lg">
+                          <h3 className="line-clamp-1 min-w-0 flex-1 break-words text-lg font-bold sm:text-xl">
                             {currentPromo.item.title || "Promoción"}
                           </h3>
                         </div>
                         {currentPromo.item.description.trim() && (
-                          <p className="mt-1 line-clamp-2 break-words text-sm leading-5 text-white/90 sm:text-base">
+                          <p className="mt-1 line-clamp-2 break-words text-base leading-6 text-white/90 sm:text-lg">
                             {currentPromo.item.description}
                           </p>
                         )}
@@ -468,34 +468,34 @@ export function ProfileCard({
                           </p>
                         )}
                         {currentPromo.item.validity.trim() && (
-                          <p className="mt-1 break-words text-sm font-medium text-white/90">
+                          <p className="mt-1 break-words text-base font-medium text-white/90">
                             📅 {currentPromo.item.validity}
                           </p>
                         )}
-                        <span className="mt-1 inline-flex rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide backdrop-blur-sm">
+                        <span className="mt-1 inline-flex rounded-full bg-white/20 px-2 py-0.5 text-sm font-semibold uppercase tracking-wide backdrop-blur-sm">
                           Activa
                         </span>
                       </>
                     ) : (
                       <>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="line-clamp-1 min-w-0 flex-1 break-words text-base font-bold sm:text-lg">
+                          <h3 className="line-clamp-1 min-w-0 flex-1 break-words text-lg font-bold sm:text-xl">
                             {currentPromo.item.name || "Producto"}
                           </h3>
-                          <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-1 text-sm font-semibold backdrop-blur-sm">
+                          <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-1 text-base font-semibold backdrop-blur-sm">
                             🔥 {currentPromo.item.promotionLabel.trim() || "Oferta especial"}
                           </span>
                         </div>
                         {currentPromo.item.description.trim() && (
-                          <p className="mt-1 line-clamp-2 break-words text-sm leading-5 text-white/90 sm:text-base">
+                          <p className="mt-1 line-clamp-2 break-words text-base leading-6 text-white/90 sm:text-lg">
                             {currentPromo.item.description}
                           </p>
                         )}
                         <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
-                          <span className="text-sm text-white/75 line-through">${currentPromo.item.price}</span>
+                          <span className="text-base text-white/75 line-through">${currentPromo.item.price}</span>
                           <span className="rounded-lg bg-red-600 px-3 py-1 text-xl font-extrabold leading-tight text-white shadow-lg sm:text-2xl">${currentPromo.item.promotionPrice}</span>
                         </div>
-                        <span className="mt-1 inline-flex rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide backdrop-blur-sm">
+                        <span className="mt-1 inline-flex rounded-full bg-white/20 px-2 py-0.5 text-sm font-semibold uppercase tracking-wide backdrop-blur-sm">
                           Activa
                         </span>
                       </>
@@ -507,7 +507,7 @@ export function ProfileCard({
                   type="button"
                   aria-label="Promoción u oferta anterior"
                   onClick={() => changePromo(-1)}
-                  className="pointer-events-auto absolute left-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/50 bg-black/35 text-xl font-semibold text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:h-12 sm:w-12"
+                  className="pointer-events-auto absolute left-2 top-1/2 z-20 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full border border-white/50 bg-black/35 text-xl font-semibold text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
                   &lt;
                 </button>
@@ -515,7 +515,7 @@ export function ProfileCard({
                   type="button"
                   aria-label="Siguiente promoción u oferta"
                   onClick={() => changePromo(1)}
-                  className="pointer-events-auto absolute right-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/50 bg-black/35 text-xl font-semibold text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:h-12 sm:w-12"
+                  className="pointer-events-auto absolute right-2 top-1/2 z-20 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full border border-white/50 bg-black/35 text-xl font-semibold text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
                   &gt;
                 </button>
@@ -547,7 +547,7 @@ export function ProfileCard({
             {paginatedProducts.filter((product) => !product.category.trim()).map(renderProduct)}
             {groupedProducts.map(([key, group]) => (
               <section key={key} aria-label={group.name} className="mt-2 grid gap-3">
-                <h3 className="border-b border-current/10 pb-2 text-base font-semibold" style={{ color: textColor }}>
+                <h3 className="border-b border-current/10 pb-2 text-lg font-semibold" style={{ color: textColor }}>
                   {group.name}
                 </h3>
                 {group.products.map(renderProduct)}
