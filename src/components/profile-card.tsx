@@ -114,7 +114,7 @@ function ActionIcon({ kind }: { kind: TarjetaLink["tipo"] }) {
     "aria-hidden": true as const,
     viewBox: "0 0 24 24",
     fill: "none",
-    className: "h-5 w-5 shrink-0",
+    className: "h-6 w-6 shrink-0",
   };
 
   if (kind === "whatsapp") {
@@ -169,9 +169,9 @@ function CardAction({
     <>
       <ActionIcon kind={kind} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate">{title}</span>
+        <span className="block truncate text-lg font-bold sm:text-xl">{title}</span>
         {subtitle && (
-          <span className="mt-0.5 block truncate text-xs font-normal text-white/75">
+          <span className="mt-0.5 block truncate text-sm font-normal text-white/85 sm:text-base">
             {subtitle}
           </span>
         )}
@@ -180,14 +180,14 @@ function CardAction({
         aria-hidden="true"
         viewBox="0 0 20 20"
         fill="none"
-        className="ml-auto h-4 w-4 opacity-60 transition-transform group-hover:translate-x-0.5 group-hover:opacity-100"
+        className="ml-auto h-5 w-5 opacity-60 transition-transform group-hover:translate-x-0.5 group-hover:opacity-100"
       >
         <path d="M4.5 10h11m0 0-4.5-4.5M15.5 10 11 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </>
   );
   const className =
-    "card-action group flex min-h-14 items-center justify-center gap-3 rounded-2xl px-5 text-left text-sm font-semibold text-white shadow-[0_8px_18px_rgba(20,30,20,0.12)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(20,30,20,0.18)] active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3";
+    "card-action group flex min-h-[60px] items-center justify-center gap-3 rounded-2xl px-5 py-4 text-left text-sm font-semibold text-white shadow-[0_8px_18px_rgba(20,30,20,0.12)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(20,30,20,0.18)] active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3";
 
   return href ? (
     <a
@@ -312,9 +312,9 @@ export function ProfileCard({
           <div aria-hidden="true" className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-black/[0.06] text-xs opacity-60">Imagen</div>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold">{product.name || "Producto"}</h3>
-          {product.description.trim() && <p className="mt-1 text-xs leading-5 opacity-75">{product.description}</p>}
-          {product.price && <p className="mt-1 text-sm font-bold text-neutral-900">${product.price}</p>}
+          <h3 className="truncate text-base font-semibold">{product.name || "Producto"}</h3>
+          {product.description.trim() && <p className="mt-1 text-sm leading-5 opacity-75">{product.description}</p>}
+          {product.price && <p className="mt-1 text-base font-bold text-neutral-900">${product.price}</p>}
         </div>
       </article>
     );
@@ -351,14 +351,14 @@ export function ProfileCard({
         {tarjeta.nombre || "Nombre del negocio"}
       </h1>
       {tarjeta.eslogan && (
-        <p className="profile-card-tagline mx-auto mt-2 max-w-xs text-sm leading-6" style={{ color: textColor, opacity: 0.72 }}>
+        <p className="profile-card-tagline mx-auto mt-2 max-w-xs text-base leading-7" style={{ color: textColor, opacity: 0.72 }}>
           {tarjeta.eslogan}
         </p>
       )}
       {menuView ? (
         <a
           href={`/?c=${encodeURIComponent(tarjeta.slug)}`}
-          className="mt-7 inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(20,30,20,0.12)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(20,30,20,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3"
+          className="mt-7 inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-3 text-base font-medium text-white shadow-[0_8px_18px_rgba(20,30,20,0.12)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(20,30,20,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3"
           style={{ backgroundColor: buttonColor }}
         >
           ← Volver
@@ -389,11 +389,11 @@ export function ProfileCard({
       {!menuView && showMenuButton && (
         <a
           href={menuHref}
-          className="card-action group mt-3 flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl px-5 text-left text-sm font-semibold text-white shadow-[0_8px_18px_rgba(20,30,20,0.12)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(20,30,20,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3"
+          className="card-action group mt-3 flex min-h-[60px] w-full items-center justify-center gap-3 rounded-2xl px-5 py-4 text-left text-sm font-semibold text-white shadow-[0_8px_18px_rgba(20,30,20,0.12)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(20,30,20,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3"
           style={{ backgroundColor: buttonColor }}
         >
-          <span className="min-w-0 flex-1">Ver Menú</span>
-          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4 opacity-70">
+          <span className="min-w-0 flex-1 text-lg font-bold sm:text-xl">Ver Menú</span>
+          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-6 w-6 opacity-70">
             <path d="M4.5 10h11m0 0-4.5-4.5M15.5 10 11 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </a>
@@ -404,8 +404,8 @@ export function ProfileCard({
           className="mt-8 text-left"
         >
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-base font-semibold" style={{ color: textColor }}>Promociones y ofertas</h2>
-            <span className="text-xs font-medium opacity-70" aria-live="polite">
+            <h2 className="text-lg font-semibold" style={{ color: textColor }}>Promociones y ofertas</h2>
+            <span className="text-sm font-medium opacity-70" aria-live="polite">
               {currentPromoIndex + 1} / {totalPromos}
             </span>
           </div>
@@ -441,7 +441,7 @@ export function ProfileCard({
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
                 {currentPromo.kind === "promotion" && (
-                  <span className="absolute right-3 top-3 z-10 inline-flex -rotate-3 items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-extrabold text-white shadow-lg sm:right-4 sm:top-4 sm:text-sm">
+                  <span className="absolute right-3 top-3 z-10 inline-flex -rotate-3 items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-extrabold text-white shadow-lg sm:right-4 sm:top-4">
                     <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                       <path d="M3.3 2.5h8.1l6.1 6.1a1.8 1.8 0 0 1 0 2.5l-4.4 4.4a1.8 1.8 0 0 1-2.5 0L4.5 9.4V2.5h-1.2Zm3.2 3a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z" />
                     </svg>
@@ -453,12 +453,12 @@ export function ProfileCard({
                     {currentPromo.kind === "promotion" ? (
                       <>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="line-clamp-1 min-w-0 flex-1 break-words text-sm font-bold sm:text-lg">
+                          <h3 className="line-clamp-1 min-w-0 flex-1 break-words text-base font-bold sm:text-lg">
                             {currentPromo.item.title || "Promoción"}
                           </h3>
                         </div>
                         {currentPromo.item.description.trim() && (
-                          <p className="mt-1 line-clamp-2 break-words text-[11px] leading-4 text-white/90 sm:text-xs">
+                          <p className="mt-1 line-clamp-2 break-words text-sm leading-5 text-white/90 sm:text-base">
                             {currentPromo.item.description}
                           </p>
                         )}
@@ -468,34 +468,34 @@ export function ProfileCard({
                           </p>
                         )}
                         {currentPromo.item.validity.trim() && (
-                          <p className="mt-1 break-words text-[10px] font-medium text-white/90 sm:text-xs">
+                          <p className="mt-1 break-words text-sm font-medium text-white/90">
                             📅 {currentPromo.item.validity}
                           </p>
                         )}
-                        <span className="mt-1 inline-flex rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide backdrop-blur-sm">
+                        <span className="mt-1 inline-flex rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide backdrop-blur-sm">
                           Activa
                         </span>
                       </>
                     ) : (
                       <>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="line-clamp-1 min-w-0 flex-1 break-words text-sm font-bold sm:text-lg">
+                          <h3 className="line-clamp-1 min-w-0 flex-1 break-words text-base font-bold sm:text-lg">
                             {currentPromo.item.name || "Producto"}
                           </h3>
-                          <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm">
+                          <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-1 text-sm font-semibold backdrop-blur-sm">
                             🔥 {currentPromo.item.promotionLabel.trim() || "Oferta especial"}
                           </span>
                         </div>
                         {currentPromo.item.description.trim() && (
-                          <p className="mt-1 line-clamp-2 break-words text-[11px] leading-4 text-white/90 sm:text-xs">
+                          <p className="mt-1 line-clamp-2 break-words text-sm leading-5 text-white/90 sm:text-base">
                             {currentPromo.item.description}
                           </p>
                         )}
                         <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
-                          <span className="text-xs text-white/75 line-through">${currentPromo.item.price}</span>
+                          <span className="text-sm text-white/75 line-through">${currentPromo.item.price}</span>
                           <span className="rounded-lg bg-red-600 px-3 py-1 text-xl font-extrabold leading-tight text-white shadow-lg sm:text-2xl">${currentPromo.item.promotionPrice}</span>
                         </div>
-                        <span className="mt-1 inline-flex rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide backdrop-blur-sm">
+                        <span className="mt-1 inline-flex rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide backdrop-blur-sm">
                           Activa
                         </span>
                       </>
@@ -507,7 +507,7 @@ export function ProfileCard({
                   type="button"
                   aria-label="Promoción u oferta anterior"
                   onClick={() => changePromo(-1)}
-                  className="pointer-events-auto absolute left-2 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/50 bg-black/35 text-xl font-semibold text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="pointer-events-auto absolute left-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/50 bg-black/35 text-xl font-semibold text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:h-12 sm:w-12"
                 >
                   &lt;
                 </button>
@@ -515,7 +515,7 @@ export function ProfileCard({
                   type="button"
                   aria-label="Siguiente promoción u oferta"
                   onClick={() => changePromo(1)}
-                  className="pointer-events-auto absolute right-2 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/50 bg-black/35 text-xl font-semibold text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="pointer-events-auto absolute right-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/50 bg-black/35 text-xl font-semibold text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:h-12 sm:w-12"
                 >
                   &gt;
                 </button>
@@ -542,12 +542,12 @@ export function ProfileCard({
       )}
       {menuView && visibleProducts.length > 0 && (
         <div ref={productsSectionRef} className="mt-7 scroll-mt-5 text-left">
-          <h2 className="mb-3 text-base font-semibold" style={{ color: textColor }}>Productos</h2>
+          <h2 className="mb-3 text-lg font-semibold" style={{ color: textColor }}>Productos</h2>
           <div className="grid max-h-[55vh] gap-3 overflow-y-auto overscroll-contain pr-1">
             {paginatedProducts.filter((product) => !product.category.trim()).map(renderProduct)}
             {groupedProducts.map(([key, group]) => (
               <section key={key} aria-label={group.name} className="mt-2 grid gap-3">
-                <h3 className="border-b border-current/10 pb-2 text-sm font-semibold" style={{ color: textColor }}>
+                <h3 className="border-b border-current/10 pb-2 text-base font-semibold" style={{ color: textColor }}>
                   {group.name}
                 </h3>
                 {group.products.map(renderProduct)}
@@ -555,12 +555,12 @@ export function ProfileCard({
             ))}
           </div>
           {visibleProducts.length > PRODUCTS_PER_PAGE && (
-            <nav aria-label="Paginación de productos" className="mt-4 flex items-center justify-center gap-2 text-xs">
+            <nav aria-label="Paginación de productos" className="mt-4 flex items-center justify-center gap-2 text-sm">
               <button
                 type="button"
                 onClick={() => changeProductPage(currentProductPage - 1)}
                 disabled={currentProductPage === 1}
-                className="min-h-9 rounded-lg border border-current/15 px-3 font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 rounded-lg border border-current/15 px-4 py-2 font-medium disabled:cursor-not-allowed disabled:opacity-40"
               >
                 ← Anterior
               </button>
@@ -571,7 +571,7 @@ export function ProfileCard({
                 type="button"
                 onClick={() => changeProductPage(currentProductPage + 1)}
                 disabled={currentProductPage === productPageCount}
-                className="min-h-9 rounded-lg px-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 rounded-lg px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
                 style={{ backgroundColor: buttonColor }}
               >
                 Siguiente →
@@ -624,7 +624,7 @@ export function ProfileCard({
                   className="max-h-[55vh] w-full object-contain"
                 />
               ) : (
-                <span className="text-sm text-[#788078]">Sin imagen</span>
+                <span className="text-base text-[#788078]">Sin imagen</span>
               )}
             </div>
             <div className="min-w-0">
@@ -635,7 +635,7 @@ export function ProfileCard({
               </h2>
               {lightboxItem.kind === "promotion" ? (
                 <>
-                  <p className="mt-2 inline-flex rounded-full bg-black/[0.06] px-3 py-1 text-sm font-semibold">
+                  <p className="mt-2 inline-flex rounded-full bg-black/[0.06] px-3 py-1 text-base font-semibold">
                     {lightboxItem.item.discount || "Descuento"}
                   </p>
                   {lightboxItem.item.price.trim() && (
@@ -644,27 +644,27 @@ export function ProfileCard({
                     </p>
                   )}
                   {lightboxItem.item.validity.trim() && (
-                    <p className="mt-2 break-words text-sm text-[#526254]">📅 {lightboxItem.item.validity}</p>
+                    <p className="mt-2 break-words text-base text-[#526254]">📅 {lightboxItem.item.validity}</p>
                   )}
                   {lightboxItem.item.description.trim() && (
-                    <p className="mt-3 break-words text-sm leading-6 text-[#526254]">
+                    <p className="mt-3 break-words text-base leading-7 text-[#526254]">
                       {lightboxItem.item.description}
                     </p>
                   )}
                 </>
               ) : (
                 <>
-                  <p className="mt-2 inline-flex rounded-full bg-black/[0.06] px-3 py-1 text-sm font-semibold">
+                  <p className="mt-2 inline-flex rounded-full bg-black/[0.06] px-3 py-1 text-base font-semibold">
                     🔥 {lightboxItem.item.promotionLabel.trim() || "Oferta especial"}
                   </p>
                   <div className="mt-3 flex flex-wrap items-baseline gap-2">
-                    <span className="text-sm text-[#788078] line-through">${lightboxItem.item.price}</span>
+                    <span className="text-base text-[#788078] line-through">${lightboxItem.item.price}</span>
                     <span className="text-2xl font-bold" style={{ color: buttonColor }}>
                       ${lightboxItem.item.promotionPrice}
                     </span>
                   </div>
                   {lightboxItem.item.description.trim() && (
-                    <p className="mt-3 break-words text-sm leading-6 text-[#526254]">
+                    <p className="mt-3 break-words text-base leading-7 text-[#526254]">
                       {lightboxItem.item.description}
                     </p>
                   )}

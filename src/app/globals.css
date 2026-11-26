@@ -114,13 +114,13 @@ a {
 .card-action {
   display: flex;
   width: 100%;
-  min-height: 3.5rem;
+  min-height: 3.75rem;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
   border: 0;
   border-radius: 1rem;
-  padding: 0.75rem 1.25rem;
+  padding: 1rem 1.25rem;
   color: #fff;
   text-align: left;
   font-size: 0.875rem;
@@ -287,6 +287,7 @@ a {
 
   .card-message,
   .card-skeleton {
+    display: grid;
     min-height: 100vh;
     min-height: 100svh;
     align-content: center;
