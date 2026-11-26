@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Script from "next/script";
+import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ProfileCard,
@@ -177,7 +178,6 @@ function normalizeCategory(category: string) {
 
 export function AdminPanel() {
   const [client, setClient] = useState<SupabaseBrowserClient | null>(null);
-  const [qrReady, setQrReady] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const [view, setView] = useState<AdminView>("list");
   const [section, setSection] = useState<AdminSection>("cards");
@@ -191,6 +191,9 @@ export function AdminPanel() {
   const [savedLink, setSavedLink] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [qrSvg, setQrSvg] = useState("");
+  const [qrStatus, setQrStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [qrError, setQrError] = useState("");
   const [selectedSlug, setSelectedSlug] = useState("");
   const [originalProductIds, setOriginalProductIds] = useState<string[]>([]);
   const [originalPromotionIds, setOriginalPromotionIds] = useState<string[]>([]);
@@ -372,15 +375,59 @@ export function AdminPanel() {
   }, [client, updateSession]);
 
   useEffect(() => {
-    if (!savedLink || !qrReady || !qrCanvas.current || !window.QRCode) return;
-    window.QRCode.toCanvas(qrCanvas.current, savedLink, {
-      width: 160,
-      margin: 1,
-      color: { dark: "#20372a", light: "#ffffff" },
-    })
-      .then(() => setQrDataUrl(qrCanvas.current?.toDataURL("image/png") ?? ""))
-      .catch((error: Error) => setFormMessage(`No se pudo generar el QR: ${error.message}`));
-  }, [savedLink, qrReady]);
+    if (!savedLink) return;
+
+    let active = true;
+    const canvas = qrCanvas.current;
+    Promise.resolve()
+      .then(async () => {
+        const url = new URL(savedLink);
+        if (url.protocol !== "https:" && url.protocol !== "http:") {
+          throw new Error("El enlace de la tarjeta debe usar HTTP o HTTPS.");
+        }
+        if (!canvas) throw new Error("No se encontró el área para mostrar el código QR.");
+
+        const options = {
+          width: 160,
+          margin: 4,
+          color: { dark: "#20372a", light: "#ffffff" },
+        };
+        await QRCode.toCanvas(canvas, url.href, options);
+        const svg = await QRCode.toString(url.href, { ...options, type: "svg" });
+        if (!active) return;
+        setQrDataUrl(canvas.toDataURL("image/png"));
+        setQrSvg(svg);
+        setQrStatus("ready");
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+        setQrError(error instanceof Error ? error.message : String(error));
+        setQrStatus("error");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [savedLink]);
+
+  function downloadQrSvg() {
+    if (!qrSvg) return;
+    const url = URL.createObjectURL(new Blob([qrSvg], { type: "image/svg+xml;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${form.slug}-qr.svg`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function downloadQrPng() {
+    if (!qrDataUrl) return;
+    const link = document.createElement("a");
+    link.href = qrDataUrl;
+    link.download = `${form.slug}-qr.png`;
+    link.click();
+  }
 
   function resetForm() {
     menuLoadRequest.current += 1;
@@ -391,6 +438,9 @@ export function AdminPanel() {
     setSelectedSlug("");
     setSavedLink("");
     setQrDataUrl("");
+    setQrSvg("");
+    setQrStatus("idle");
+    setQrError("");
     setCopyMessage("");
     setFormMessage("");
     setOriginalProductIds([]);
@@ -465,6 +515,9 @@ export function AdminPanel() {
     setSelectedSlug(card.slug);
     setSavedLink("");
     setQrDataUrl("");
+    setQrSvg("");
+    setQrStatus("idle");
+    setQrError("");
     setFormMessage("");
     window.scrollTo({ top: 0, behavior: "smooth" });
     if (loadMenuPreview) void loadMenuPreviewData(card.slug, requestId);
@@ -600,6 +653,9 @@ export function AdminPanel() {
     setFormMessage("Guardando tarjeta...");
     setSavedLink("");
     setQrDataUrl("");
+    setQrSvg("");
+    setQrStatus("idle");
+    setQrError("");
 
     const links = form.links
       .map((link) => ({ ...link, titulo: link.titulo.trim(), url: link.url.trim() }))
@@ -647,6 +703,7 @@ export function AdminPanel() {
     setEditing(data);
     setSelectedSlug(data.slug);
     const link = `${window.location.origin}/?c=${encodeURIComponent(data.slug)}`;
+    setQrStatus("loading");
     setSavedLink(link);
     try {
       await navigator.clipboard.writeText(link);
@@ -979,11 +1036,6 @@ export function AdminPanel() {
         }}
         onError={() => setLoginMessage("No se pudo cargar Supabase. Recarga la página e inténtalo de nuevo.")}
       />
-      <Script
-        src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"
-        strategy="afterInteractive"
-        onReady={() => setQrReady(true)}
-      />
       <main className="min-h-screen bg-[#f4f6f3] px-4 py-8 text-[#202b23] sm:px-7">
         <div className="mx-auto max-w-[96rem]">
           <header className="mb-7 flex items-center justify-between gap-4">
@@ -1315,7 +1367,16 @@ export function AdminPanel() {
                   {formMessage && <p role="status" className="mt-3 text-sm text-[#526254]">{formMessage}</p>}
                   {savedLink && (
                     <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-[#e8ece6] pt-5">
-                      <canvas ref={qrCanvas} aria-label="Código QR de la tarjeta" className="h-40 w-40 rounded-lg border-8 border-white shadow-[0_4px_18px_rgba(0,0,0,0.1)]" />
+                      <div className="grid justify-items-center gap-2">
+                        <canvas ref={qrCanvas} aria-label="Código QR de la tarjeta" className="h-40 w-40 rounded-lg border-8 border-white bg-white shadow-[0_4px_18px_rgba(0,0,0,0.1)]" />
+                        {qrStatus === "loading" && <p role="status" className="text-xs text-[#788078]">Generando código QR...</p>}
+                        {qrStatus === "error" && (
+                          <p role="alert" className="max-w-40 text-center text-xs text-[#a15a5f]">
+                            No se pudo generar el QR{qrError ? `: ${qrError}` : "."}
+                          </p>
+                        )}
+                        {qrStatus === "ready" && <p role="status" className="text-xs text-[#526254]">Código QR listo.</p>}
+                      </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-semibold">Enlace guardado</h3>
                         <a href={savedLink} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all text-xs leading-5 text-[#526254] underline underline-offset-2">{savedLink}</a>
@@ -1323,7 +1384,8 @@ export function AdminPanel() {
                         <div className="mt-3 flex flex-wrap gap-2">
                           <button type="button" onClick={() => void navigator.clipboard.writeText(savedLink).then(() => setCopyMessage("Enlace copiado al portapapeles.")).catch(() => setCopyMessage("No se pudo copiar; selecciona el enlace."))} className="min-h-9 rounded-xl border border-[#dfe5dd] px-3 text-xs font-semibold text-[#344437]">Copiar enlace</button>
                           <a href={savedLink} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center rounded-xl bg-[#20372a] px-3 text-xs font-semibold text-white hover:bg-[#2b4937]">Abrir tarjeta</a>
-                          <a href={qrDataUrl || undefined} download={`${form.slug}-qr.png`} aria-disabled={!qrDataUrl} className="inline-flex min-h-9 items-center rounded-xl border border-[#dfe5dd] px-3 text-xs font-semibold text-[#344437] aria-disabled:pointer-events-none aria-disabled:opacity-50">Descargar QR</a>
+                          <button type="button" onClick={() => downloadQrSvg()} disabled={qrStatus !== "ready" || !qrSvg} className="min-h-9 rounded-xl border border-[#dfe5dd] px-3 text-xs font-semibold text-[#344437] disabled:cursor-not-allowed disabled:opacity-50">Descargar QR (SVG)</button>
+                          <button type="button" onClick={downloadQrPng} disabled={qrStatus !== "ready" || !qrDataUrl} className="min-h-9 rounded-xl border border-[#dfe5dd] px-3 text-xs font-semibold text-[#344437] disabled:cursor-not-allowed disabled:opacity-50">Descargar QR (PNG)</button>
                         </div>
                       </div>
                     </div>
