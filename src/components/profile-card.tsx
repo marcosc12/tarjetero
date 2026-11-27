@@ -73,6 +73,14 @@ type CarouselItem =
   | { kind: "promotion"; item: MenuPromotion }
   | { kind: "product"; item: MenuProduct };
 
+type MenuOrderItem = {
+  key: string;
+  name: string;
+  price: string;
+  quantity: number;
+  note: string;
+};
+
 function safeHttpUrl(value: string) {
   try {
     const url = new URL(value);
@@ -245,6 +253,9 @@ export function ProfileCard({
   const [indicePromo, setIndicePromo] = useState(0);
   const [promoTimerReset, setPromoTimerReset] = useState(0);
   const [lightboxItem, setLightboxItem] = useState<CarouselItem | null>(null);
+  const [orderItems, setOrderItems] = useState<MenuOrderItem[]>([]);
+  const [orderOpen, setOrderOpen] = useState(false);
+  const [orderReady, setOrderReady] = useState(false);
   const productsSectionRef = useRef<HTMLDivElement>(null);
   const hasActiveMenu =
     tarjeta.hasActiveMenu ??
@@ -307,6 +318,7 @@ export function ProfileCard({
   const totalPromos = carouselItems.length;
   const currentPromoIndex = indicePromo % Math.max(1, totalPromos);
   const currentPromo = carouselItems[currentPromoIndex];
+  const orderCount = orderItems.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
     if (totalPromos < 2) return;
@@ -325,6 +337,15 @@ export function ProfileCard({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [lightboxItem]);
 
+  useEffect(() => {
+    if (!orderOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOrderOpen(false);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [orderOpen]);
+
   function changeProductPage(nextPage: number) {
     setProductPageState({ slug: tarjeta.slug, page: nextPage });
     productsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -336,8 +357,51 @@ export function ProfileCard({
     setPromoTimerReset((key) => key + 1);
   }
 
+  function addOrderItem(product: MenuProduct) {
+    setOrderReady(false);
+    setOrderItems((current) => {
+      const selected = current.find((item) => item.key === product.key);
+      if (selected) {
+        return current.map((item) =>
+          item.key === product.key ? { ...item, quantity: item.quantity + 1 } : item,
+        );
+      }
+      return [
+        ...current,
+        { key: product.key, name: product.name, price: product.price, quantity: 1, note: "" },
+      ];
+    });
+  }
+
+  function updateOrderQuantity(key: string, change: number) {
+    setOrderReady(false);
+    setOrderItems((current) =>
+      current.map((item) =>
+        item.key === key ? { ...item, quantity: Math.max(1, item.quantity + change) } : item,
+      ),
+    );
+  }
+
+  function updateOrderNote(key: string, note: string) {
+    setOrderReady(false);
+    setOrderItems((current) =>
+      current.map((item) => (item.key === key ? { ...item, note } : item)),
+    );
+  }
+
+  function removeOrderItem(key: string) {
+    setOrderReady(false);
+    setOrderItems((current) => current.filter((item) => item.key !== key));
+  }
+
+  function clearOrder() {
+    setOrderItems([]);
+    setOrderReady(false);
+  }
+
   function renderProduct(product: MenuProduct) {
     const imageUrl = product.imageUrl ? safeHttpUrl(product.imageUrl) : "";
+    const orderItem = orderItems.find((item) => item.key === product.key);
 
     return (
       <article key={product.key} className="overflow-hidden rounded-2xl bg-black/[0.035]">
@@ -358,6 +422,43 @@ export function ProfileCard({
           <h3 className="break-words text-lg font-semibold leading-snug">{product.name}</h3>
           {product.description.trim() && <p className="text-base leading-6 opacity-75">{product.description}</p>}
           {product.price && <p className="text-lg font-bold text-neutral-900">${product.price}</p>}
+          {orderItem ? (
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">En tu pedido</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label={`Restar una unidad de ${product.name}`}
+                  onClick={() => updateOrderQuantity(product.key, -1)}
+                  disabled={orderItem.quantity <= 1}
+                  className="grid h-9 w-9 place-items-center rounded-lg border border-current/20 text-lg disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  −
+                </button>
+                <span aria-live="polite" className="min-w-5 text-center font-semibold">
+                  {orderItem.quantity}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Agregar una unidad de ${product.name}`}
+                  onClick={() => addOrderItem(product)}
+                  className="grid h-9 w-9 place-items-center rounded-lg text-lg font-semibold text-white"
+                  style={{ backgroundColor: buttonColor }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => addOrderItem(product)}
+              className="mt-2 min-h-10 rounded-xl px-4 py-2 text-sm font-semibold text-white"
+              style={{ backgroundColor: buttonColor }}
+            >
+              Agregar al pedido
+            </button>
+          )}
         </div>
       </article>
     );
@@ -652,7 +753,19 @@ export function ProfileCard({
           Cargando productos...
         </p>
       )}
+      {menuView && <div aria-hidden="true" className="h-16" />}
     </section>
+    {menuView && typeof document !== "undefined" && createPortal(
+      <button
+        type="button"
+        onClick={() => setOrderOpen(true)}
+        className="fixed bottom-4 left-4 right-4 z-40 mx-auto min-h-12 max-w-[22rem] rounded-2xl px-5 py-3 text-base font-semibold text-white shadow-[0_8px_24px_rgba(20,30,20,0.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        style={{ backgroundColor: buttonColor }}
+      >
+        Ver pedido ({orderCount})
+      </button>,
+      document.body,
+    )}
     {lightboxItem && typeof document !== "undefined" && createPortal(
       <div
         role="presentation"
@@ -744,6 +857,136 @@ export function ProfileCard({
               )}
             </div>
           </div>
+        </section>
+      </div>,
+      document.body,
+    )}
+    {orderOpen && typeof document !== "undefined" && createPortal(
+      <div
+        role="presentation"
+        onClick={() => setOrderOpen(false)}
+        className="fixed inset-0 z-[110] flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      >
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="menu-order-title"
+          onClick={(event) => event.stopPropagation()}
+          className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white text-left text-[#202b23] shadow-2xl sm:rounded-3xl"
+        >
+          <header className="flex items-center justify-between gap-3 border-b border-[#e8ece6] px-5 py-4 sm:px-6">
+            <div>
+              <h2 id="menu-order-title" className="text-xl font-semibold">Mi pedido</h2>
+              <p className="mt-0.5 text-sm text-[#788078]">{orderCount} producto{orderCount === 1 ? "" : "s"}</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Cerrar pedido"
+              autoFocus
+              onClick={() => setOrderOpen(false)}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/[0.05] text-2xl leading-none hover:bg-black/[0.1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              ×
+            </button>
+          </header>
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+            {orderItems.length === 0 ? (
+              <p className="rounded-2xl bg-[#f4f6f3] px-4 py-6 text-center text-sm text-[#788078]">
+                Aún no agregas productos a tu pedido.
+              </p>
+            ) : (
+              orderItems.map((item) => {
+                const unitPrice = Number(item.price);
+                const hasNumericPrice = item.price.trim() !== "" && Number.isFinite(unitPrice);
+                const itemTotal = hasNumericPrice
+                  ? `$${(unitPrice * item.quantity).toFixed(2)}`
+                  : item.price
+                    ? `$${item.price}`
+                    : "Precio no disponible";
+                return (
+                  <article key={item.key} className="rounded-2xl border border-[#e8ece6] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="break-words font-semibold">{item.name}</h3>
+                        <p className="mt-1 text-sm text-[#526254]">
+                          {item.price ? `$${item.price} c/u` : "Precio no disponible"}
+                          <span className="px-1.5">·</span>
+                          {itemTotal}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeOrderItem(item.key)}
+                        className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#a15a5f] hover:bg-[#fbf6f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label={`Restar una unidad de ${item.name}`}
+                        onClick={() => updateOrderQuantity(item.key, -1)}
+                        disabled={item.quantity <= 1}
+                        className="grid h-9 w-9 place-items-center rounded-lg border border-[#dfe5dd] text-lg disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        −
+                      </button>
+                      <span aria-live="polite" className="min-w-6 text-center text-sm font-semibold">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Agregar una unidad de ${item.name}`}
+                        onClick={() => updateOrderQuantity(item.key, 1)}
+                        className="grid h-9 w-9 place-items-center rounded-lg text-lg font-semibold text-white"
+                        style={{ backgroundColor: buttonColor }}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <label className="mt-3 grid gap-1.5 text-xs font-semibold text-[#526254]">
+                      Nota rápida (opcional)
+                      <textarea
+                        value={item.note}
+                        onChange={(event) => updateOrderNote(item.key, event.target.value)}
+                        maxLength={140}
+                        rows={2}
+                        placeholder="Ej. sin cebolla"
+                        className="w-full resize-y rounded-xl border border-[#dfe5dd] px-3 py-2 text-sm font-normal text-[#202b23] outline-none placeholder:text-[#a0a9a0] focus:border-[#78927d] focus:ring-2 focus:ring-[#78927d]/15"
+                      />
+                    </label>
+                  </article>
+                );
+              })
+            )}
+          </div>
+          <footer className="grid gap-3 border-t border-[#e8ece6] p-4 sm:p-5">
+            {orderReady && (
+              <p role="status" className="text-center text-sm text-[#526254]">
+                Tu pedido está listo para confirmar con el mesero.
+              </p>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={clearOrder}
+                disabled={orderItems.length === 0}
+                className="min-h-11 rounded-xl border border-[#dfe5dd] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Vaciar pedido
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderReady(true)}
+                disabled={orderItems.length === 0}
+                className="min-h-11 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ backgroundColor: buttonColor }}
+              >
+                Listo para confirmar con el mesero
+              </button>
+            </div>
+          </footer>
         </section>
       </div>,
       document.body,
