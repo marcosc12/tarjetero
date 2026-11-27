@@ -14,6 +14,7 @@ export type Tarjeta = {
   nombre: string | null;
   cliente_nombre?: string | null;
   cliente_telefono?: string | null;
+  demo_hasta?: string | null;
   eslogan: string | null;
   inicial: string | null;
   avatar_url?: string | null;
@@ -34,6 +35,20 @@ export type Tarjeta = {
   ubicacion_sub: string | null;
   activo: boolean;
 };
+
+export function isCardDemoExpired(demoHasta?: string | null, now = Date.now()) {
+  if (!demoHasta) return false;
+  const expiration = new Date(demoHasta).getTime();
+  return !Number.isFinite(expiration) || expiration <= now;
+}
+
+export function isCardServiceAvailable(
+  activo: boolean,
+  demoHasta?: string | null,
+  now = Date.now(),
+) {
+  return activo && !isCardDemoExpired(demoHasta, now);
+}
 
 export type MenuProduct = {
   id?: string;
@@ -316,18 +331,35 @@ export function ProfileCard({
   const [orderReady, setOrderReady] = useState(false);
   const [orderLoadedSlug, setOrderLoadedSlug] = useState("");
   const [orderStorageMessage, setOrderStorageMessage] = useState("");
+  const [expiryCheck, setExpiryCheck] = useState(0);
   const orderStorageKey = `tarjetero:menu-order:${tarjeta.slug}`;
+  const demoExpiresAt = tarjeta.demo_hasta ? Date.parse(tarjeta.demo_hasta) : null;
+  const serviceAvailable = isCardServiceAvailable(tarjeta.activo, tarjeta.demo_hasta);
   const productsSectionRef = useRef<HTMLDivElement>(null);
   const hasActiveMenu =
     tarjeta.hasActiveMenu ??
     (products.some((product) => product.active) || promotions.some((promotion) => promotion.active));
-  const showMenuButton = tarjeta.activo === true && tarjeta.mostrar_menu !== false && hasActiveMenu;
+  const showMenuButton = serviceAvailable && tarjeta.mostrar_menu !== false && hasActiveMenu;
   const suspendedNotice = (
     <div role="status" className="card-suspended mt-7 rounded-2xl border border-[#f0e5e8] bg-[#fbf6f7] px-5 py-4 text-sm leading-6 text-[#806b70]">
-      Servicio temporalmente suspendido. Contacta al administrador para reactivarlo.
+      {tarjeta.activo !== true
+        ? "Servicio temporalmente suspendido. Contacta al administrador para reactivarlo."
+        : "El periodo de prueba ha vencido. Contacta al administrador para renovarlo."}
     </div>
   );
   const menuHref = `/?c=${encodeURIComponent(tarjeta.slug)}&view=menu`;
+
+  useEffect(() => {
+    if (demoExpiresAt === null || !Number.isFinite(demoExpiresAt)) return;
+    const remaining = demoExpiresAt - Date.now();
+    if (remaining <= 0) return;
+    const timer = window.setTimeout(
+      () => setExpiryCheck((current) => current + 1),
+      Math.min(remaining, 2_147_000_000),
+    );
+    return () => window.clearTimeout(timer);
+  }, [demoExpiresAt, expiryCheck]);
+
   const visibleProducts = useMemo(
     () => products.filter((product) => previewMode || product.active),
     [products, previewMode],
@@ -673,7 +705,7 @@ export function ProfileCard({
         >
           ← Volver
         </a>
-      ) : tarjeta.activo === true ? (
+      ) : serviceAvailable ? (
         <div className="mt-7 space-y-3">
           {links.filter((link) => link.url.trim()).map((link) => (
             <CardAction
@@ -692,7 +724,7 @@ export function ProfileCard({
           )}
         </div>
       ) : suspendedNotice}
-      {menuView && tarjeta.activo !== true && suspendedNotice}
+      {menuView && !serviceAvailable && suspendedNotice}
       {!menuView && showMenuButton && (
         <a
           href={menuHref}
@@ -705,7 +737,7 @@ export function ProfileCard({
           </svg>
         </a>
       )}
-      {menuView && tarjeta.activo === true && carouselItems.length > 0 && (
+      {menuView && serviceAvailable && carouselItems.length > 0 && (
         <section
           aria-label="Promociones y productos en descuento"
           className="mt-8 text-left"
@@ -843,7 +875,7 @@ export function ProfileCard({
           </nav>
         </section>
       )}
-      {menuView && tarjeta.activo === true && visibleProducts.length > 0 && (
+      {menuView && serviceAvailable && visibleProducts.length > 0 && (
         <div ref={productsSectionRef} className="mt-7 scroll-mt-5 text-left">
           <nav aria-label="Filtrar productos por categoría" className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[{ key: "all", name: "Todos" }, ...categoryOptions].map(({ key, name }) => {
@@ -907,14 +939,14 @@ export function ProfileCard({
           )}
         </div>
       )}
-      {menuView && tarjeta.activo === true && menuLoading && visibleProducts.length === 0 && (
+      {menuView && serviceAvailable && menuLoading && visibleProducts.length === 0 && (
         <p role="status" className="mt-7 text-left text-sm opacity-70">
           Cargando productos...
         </p>
       )}
-      {menuView && tarjeta.activo === true && <div aria-hidden="true" className="h-16" />}
+      {menuView && serviceAvailable && <div aria-hidden="true" className="h-16" />}
     </section>
-    {menuView && tarjeta.activo === true && typeof document !== "undefined" && createPortal(
+    {menuView && serviceAvailable && typeof document !== "undefined" && createPortal(
       <button
         type="button"
         onClick={() => setOrderOpen(true)}
@@ -925,7 +957,7 @@ export function ProfileCard({
       </button>,
       document.body,
     )}
-    {tarjeta.activo === true && lightboxItem && typeof document !== "undefined" && createPortal(
+    {serviceAvailable && lightboxItem && typeof document !== "undefined" && createPortal(
       <div
         role="presentation"
         onClick={() => setLightboxItem(null)}
@@ -1020,7 +1052,7 @@ export function ProfileCard({
       </div>,
       document.body,
     )}
-    {tarjeta.activo === true && orderOpen && typeof document !== "undefined" && createPortal(
+    {serviceAvailable && orderOpen && typeof document !== "undefined" && createPortal(
       <div
         role="presentation"
         onClick={() => setOrderOpen(false)}

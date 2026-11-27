@@ -34,6 +34,7 @@ type FormValues = {
   nombre: string;
   cliente_nombre: string;
   cliente_telefono: string;
+  demo_hasta: string;
   eslogan: string;
   inicial: string;
   avatar_url: string;
@@ -58,6 +59,7 @@ const emptyForm = (): FormValues => ({
   nombre: "",
   cliente_nombre: "",
   cliente_telefono: "",
+  demo_hasta: "",
   eslogan: "",
   inicial: "",
   avatar_url: "",
@@ -204,6 +206,32 @@ function isPersistentImageUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function dateToLocalInput(date: Date) {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+}
+
+function dateTimeLocalFromTimestamp(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? dateToLocalInput(date) : "";
+}
+
+function addDaysToDateTimeLocal(value: string, days: number) {
+  const date = value ? new Date(value) : new Date();
+  if (!Number.isFinite(date.getTime())) return "";
+  date.setDate(date.getDate() + days);
+  return dateToLocalInput(date);
+}
+
+function formatDemoUntil(value: string | null | undefined) {
+  if (!value) return "Sin límite";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "Fecha inválida";
+  const formatted = date.toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" });
+  return date.getTime() <= Date.now() ? `Vencida · ${formatted}` : formatted;
 }
 
 export function AdminPanel() {
@@ -526,6 +554,7 @@ export function AdminPanel() {
       nombre: card.nombre ?? "",
       cliente_nombre: card.cliente_nombre ?? "",
       cliente_telefono: card.cliente_telefono ?? "",
+      demo_hasta: dateTimeLocalFromTimestamp(card.demo_hasta),
       eslogan: card.eslogan ?? "",
       inicial: card.inicial ?? "",
       avatar_url: card.avatar_url ?? "",
@@ -681,6 +710,10 @@ export function AdminPanel() {
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!client || !authorized) return;
+    if (form.demo_hasta && !Number.isFinite(new Date(form.demo_hasta).getTime())) {
+      setFormMessage("La fecha y hora límite de prueba no son válidas.");
+      return;
+    }
     setBusy(true);
     setFormMessage("Guardando tarjeta...");
     setSavedLink("");
@@ -701,6 +734,7 @@ export function AdminPanel() {
       nombre: form.nombre.trim(),
       cliente_nombre: form.cliente_nombre.trim() || null,
       cliente_telefono: form.cliente_telefono.trim() || null,
+      demo_hasta: form.demo_hasta ? new Date(form.demo_hasta).toISOString() : null,
       eslogan: form.eslogan.trim() || null,
       inicial: form.inicial.trim() || null,
       avatar_url: form.avatar_url.trim() || null,
@@ -735,6 +769,11 @@ export function AdminPanel() {
     }
 
     setEditing(data);
+    setCards((current) =>
+      [...current.filter((card) => card.slug !== data.slug), data].sort((left, right) =>
+        left.slug.localeCompare(right.slug),
+      ),
+    );
     setSelectedSlug(data.slug);
     const link = `${window.location.origin}/?c=${encodeURIComponent(data.slug)}`;
     setQrStatus("loading");
@@ -1357,6 +1396,34 @@ export function AdminPanel() {
                       <label className={`${labelClass} sm:col-span-2`}>Nombre<input name="nombre" value={form.nombre} onChange={(event) => updateField("nombre", event.target.value)} required className={inputClass} /></label>
                       <label className={labelClass}>Cliente / Dueño<input name="cliente_nombre" value={form.cliente_nombre} onChange={(event) => updateField("cliente_nombre", event.target.value)} className={inputClass} /></label>
                       <label className={labelClass}>Teléfono<input name="cliente_telefono" type="tel" value={form.cliente_telefono} onChange={(event) => updateField("cliente_telefono", event.target.value)} className={inputClass} /></label>
+                      <label className={`${labelClass} sm:col-span-2`}>
+                        Prueba hasta
+                        <input
+                          name="demo_hasta"
+                          type="datetime-local"
+                          value={form.demo_hasta}
+                          onChange={(event) => updateField("demo_hasta", event.target.value)}
+                          className={inputClass}
+                        />
+                        <span className="text-[11px] font-normal text-[#788078]">Déjalo vacío para no establecer fecha límite.</span>
+                      </label>
+                      <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+                        <button
+                          type="button"
+                          onClick={() => updateField("demo_hasta", addDaysToDateTimeLocal(form.demo_hasta, 1))}
+                          className="min-h-9 rounded-lg border border-[#dfe5dd] px-3 text-xs font-semibold text-[#344437] hover:bg-[#f8faf7]"
+                        >
+                          +1 día
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateField("demo_hasta", addDaysToDateTimeLocal(form.demo_hasta, 2))}
+                          className="min-h-9 rounded-lg border border-[#dfe5dd] px-3 text-xs font-semibold text-[#344437] hover:bg-[#f8faf7]"
+                        >
+                          +2 días
+                        </button>
+                        <span className="text-[11px] text-[#788078]">Los atajos suman desde la fecha seleccionada o desde ahora.</span>
+                      </div>
                       <label className={`${labelClass} sm:col-span-2`}>Descripción / eslogan<textarea name="eslogan" value={form.eslogan} onChange={(event) => updateField("eslogan", event.target.value)} rows={2} className={inputClass} /></label>
                       <label className={`${labelClass} sm:col-span-2`}>URL de imagen del avatar (opcional)<input name="avatar_url" type="url" value={form.avatar_url} onChange={(event) => updateField("avatar_url", event.target.value)} placeholder="https://..." className={inputClass} /></label>
                       <label className="flex min-h-11 items-center justify-between gap-4 rounded-xl border border-[#e8ece6] bg-[#fbfcfa] px-3 sm:col-span-2">
@@ -1486,13 +1553,14 @@ export function AdminPanel() {
                     )}
                   </div>
                   <div className="mt-5 overflow-x-auto">
-                    <table className="w-full min-w-[56rem] text-left text-sm">
+                    <table className="w-full min-w-[68rem] text-left text-sm">
                       <thead>
                         <tr className="border-b border-[#e8ece6] text-xs font-semibold uppercase tracking-wide text-[#788078]">
                           <th scope="col" className="px-3 py-3">LINK</th>
                           <th scope="col" className="px-3 py-3">NOMBRE DE LOCAL</th>
                           <th scope="col" className="px-3 py-3">CLIENTE / DUEÑO</th>
                           <th scope="col" className="px-3 py-3">TELÉFONO</th>
+                          <th scope="col" className="px-3 py-3">PRUEBA HASTA</th>
                           <th scope="col" className="px-3 py-3 text-center">ESTADO</th>
                           <th scope="col" className="px-3 py-3 text-right">ACCIÓN</th>
                         </tr>
@@ -1516,6 +1584,7 @@ export function AdminPanel() {
                       <td className="px-3 py-3 font-medium text-[#344437]">{card.nombre || card.slug}</td>
                       <td className="px-3 py-3 text-[#526254]">{card.cliente_nombre?.trim() || "—"}</td>
                       <td className="whitespace-nowrap px-3 py-3 text-[#526254]">{card.cliente_telefono?.trim() || "—"}</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-[#526254]">{formatDemoUntil(card.demo_hasta)}</td>
                       <td className="px-3 py-3 text-center">
                         <button
                           type="button"

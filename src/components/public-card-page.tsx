@@ -3,6 +3,7 @@
 import Script from "next/script";
 import { useEffect, useState } from "react";
 import {
+  isCardServiceAvailable,
   ProfileCard,
   ProfileFooter,
   type MenuProduct,
@@ -70,7 +71,7 @@ export function PublicCardPage() {
     client
       .from("tarjetas")
       .select(
-        "slug,nombre,eslogan,inicial,avatar_url,color_fondo,color_tarjeta,color_boton,color_texto,mostrar_menu,links,whatsapp,whatsapp_sub,instagram,instagram_sub,ubicacion_url,ubicacion_sub,activo",
+        "slug,nombre,eslogan,inicial,avatar_url,color_fondo,color_tarjeta,color_boton,color_texto,mostrar_menu,links,whatsapp,whatsapp_sub,instagram,instagram_sub,ubicacion_url,ubicacion_sub,activo,demo_hasta",
       )
       .eq("slug", slug)
       .maybeSingle()
@@ -103,7 +104,8 @@ export function PublicCardPage() {
         });
         setStatus("ready");
 
-        if (showMenu && data.activo === true) {
+        const serviceAvailable = isCardServiceAvailable(data.activo, data.demo_hasta);
+        if (showMenu && serviceAvailable) {
           setMenuLoading(true);
           const [productsResult, promotionsResult] = await Promise.all([
             client
@@ -168,7 +170,7 @@ export function PublicCardPage() {
               : current,
           );
           setMenuLoading(false);
-        } else if (!showMenu && data.activo === true && data.mostrar_menu !== false) {
+        } else if (!showMenu && serviceAvailable && data.mostrar_menu !== false) {
           const [productsResult, promotionsResult] = await Promise.all([
             client
               .from("menu_productos")
