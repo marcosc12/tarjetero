@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const PRODUCTS_PER_PAGE = 5;
 
@@ -247,8 +247,8 @@ export function ProfileCard({
     { id: "ubicacion", tipo: "maps", titulo: "Cómo llegar", subtitulo: tarjeta.ubicacion_sub || "", url: tarjeta.ubicacion_url || "" },
   ];
   const links = tarjeta.links ?? legacyLinks;
-  const products = tarjeta.products ?? [];
-  const promotions = tarjeta.promotions ?? [];
+  const products = useMemo(() => tarjeta.products ?? [], [tarjeta.products]);
+  const promotions = useMemo(() => tarjeta.promotions ?? [], [tarjeta.promotions]);
   const [productPageState, setProductPageState] = useState({ slug: tarjeta.slug, page: 1 });
   const [categoryFilterState, setCategoryFilterState] = useState({ slug: tarjeta.slug, category: "all" });
   const [indicePromo, setIndicePromo] = useState(0);
@@ -263,15 +263,22 @@ export function ProfileCard({
     (products.some((product) => product.active) || promotions.some((promotion) => promotion.active));
   const showMenuButton = tarjeta.mostrar_menu !== false && hasActiveMenu;
   const menuHref = `/?c=${encodeURIComponent(tarjeta.slug)}&view=menu`;
-  const visibleProducts = products.filter((product) => previewMode || product.active);
-  const categoryOptions = Array.from(
-    visibleProducts.reduce((categories, product) => {
-      const name = product.category.trim().replace(/\s+/g, " ");
-      const key = normalizeCategory(name);
-      if (key && !categories.has(key)) categories.set(key, name);
-      return categories;
-    }, new Map<string, string>()),
-    ([key, name]) => ({ key, name }),
+  const visibleProducts = useMemo(
+    () => products.filter((product) => previewMode || product.active),
+    [products, previewMode],
+  );
+  const categoryOptions = useMemo(
+    () =>
+      Array.from(
+        visibleProducts.reduce((categories, product) => {
+          const name = product.category.trim().replace(/\s+/g, " ");
+          const key = normalizeCategory(name);
+          if (key && !categories.has(key)) categories.set(key, name);
+          return categories;
+        }, new Map<string, string>()),
+        ([key, name]) => ({ key, name }),
+      ),
+    [visibleProducts],
   );
   const requestedCategory =
     categoryFilterState.slug === tarjeta.slug ? categoryFilterState.category : "all";
@@ -279,53 +286,81 @@ export function ProfileCard({
     requestedCategory === "all" || categoryOptions.some(({ key }) => key === requestedCategory)
       ? requestedCategory
       : "all";
-  const filteredProducts =
-    selectedCategory === "all"
-      ? visibleProducts
-      : visibleProducts.filter((product) => normalizeCategory(product.category) === selectedCategory);
+  const filteredProducts = useMemo(
+    () =>
+      selectedCategory === "all"
+        ? visibleProducts
+        : visibleProducts.filter((product) => normalizeCategory(product.category) === selectedCategory),
+    [selectedCategory, visibleProducts],
+  );
   const productPageCount = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
   const currentProductPage = productPageState.slug === tarjeta.slug
     ? Math.min(productPageState.page, productPageCount)
     : 1;
-  const paginatedProducts = filteredProducts.slice(
-    (currentProductPage - 1) * PRODUCTS_PER_PAGE,
-    currentProductPage * PRODUCTS_PER_PAGE,
+  const paginatedProducts = useMemo(
+    () =>
+      filteredProducts.slice(
+        (currentProductPage - 1) * PRODUCTS_PER_PAGE,
+        currentProductPage * PRODUCTS_PER_PAGE,
+      ),
+    [currentProductPage, filteredProducts],
   );
-  const groupedProducts = Array.from(
-    paginatedProducts.reduce((groups, product) => {
-      const category = product.category.trim().replace(/\s+/g, " ");
-      const key = normalizeCategory(category);
-      if (key) {
-        const group = groups.get(key);
-        if (group) group.products.push(product);
-        else groups.set(key, { name: category, products: [product] });
-      }
-      return groups;
-    }, new Map<string, { name: string; products: MenuProduct[] }>()),
+  const groupedProducts = useMemo(
+    () =>
+      Array.from(
+        paginatedProducts.reduce((groups, product) => {
+          const category = product.category.trim().replace(/\s+/g, " ");
+          const key = normalizeCategory(category);
+          if (key) {
+            const group = groups.get(key);
+            if (group) group.products.push(product);
+            else groups.set(key, { name: category, products: [product] });
+          }
+          return groups;
+        }, new Map<string, { name: string; products: MenuProduct[] }>()),
+      ),
+    [paginatedProducts],
   );
-  const featuredProducts = products.filter(
-    (product) =>
-      product.active &&
-      product.onPromotion &&
-      product.promotionPrice.trim() !== "" &&
-      Number.isFinite(Number(product.promotionPrice)) &&
-      Number(product.promotionPrice) >= 0,
+  const featuredProducts = useMemo(
+    () =>
+      products.filter(
+        (product) =>
+          product.active &&
+          product.onPromotion &&
+          product.promotionPrice.trim() !== "" &&
+          Number.isFinite(Number(product.promotionPrice)) &&
+          Number(product.promotionPrice) >= 0,
+      ),
+    [products],
   );
-  const carouselPromotions = promotions.filter((promotion) => previewMode || promotion.active);
-  const carouselItems: CarouselItem[] = [
-    ...carouselPromotions.map((promotion) => ({ kind: "promotion" as const, item: promotion })),
-    ...featuredProducts.map((product) => ({ kind: "product" as const, item: product })),
-  ];
+  const carouselItems: CarouselItem[] = useMemo(
+    () => [
+      ...promotions
+        .filter((promotion) => previewMode || promotion.active)
+        .map((promotion) => ({ kind: "promotion" as const, item: promotion })),
+      ...featuredProducts.map((product) => ({ kind: "product" as const, item: product })),
+    ],
+    [featuredProducts, promotions, previewMode],
+  );
   const totalPromos = carouselItems.length;
   const currentPromoIndex = indicePromo % Math.max(1, totalPromos);
   const currentPromo = carouselItems[currentPromoIndex];
-  const orderCount = orderItems.reduce((total, item) => total + item.quantity, 0);
-  const hasEstimatedTotal =
-    orderItems.length > 0 &&
-    orderItems.every((item) => item.price.trim() !== "" && Number.isFinite(Number(item.price)));
-  const estimatedTotal = orderItems.reduce(
-    (total, item) => total + Number(item.price) * item.quantity,
-    0,
+  const orderItemsByKey = useMemo(
+    () => new Map<string, MenuOrderItem>(orderItems.map((item): [string, MenuOrderItem] => [item.key, item])),
+    [orderItems],
+  );
+  const { orderCount, hasEstimatedTotal, estimatedTotal } = useMemo(
+    () => ({
+      orderCount: orderItems.reduce((total, item) => total + item.quantity, 0),
+      hasEstimatedTotal:
+        orderItems.length > 0 &&
+        orderItems.every((item) => item.price.trim() !== "" && Number.isFinite(Number(item.price))),
+      estimatedTotal: orderItems.reduce(
+        (total, item) => total + Number(item.price) * item.quantity,
+        0,
+      ),
+    }),
+    [orderItems],
   );
 
   useEffect(() => {
@@ -409,14 +444,9 @@ export function ProfileCard({
     setOrderItems((current) => current.filter((item) => item.key !== key));
   }
 
-  function clearOrder() {
-    setOrderItems([]);
-    setOrderReady(false);
-  }
-
   function renderProduct(product: MenuProduct) {
     const imageUrl = product.imageUrl ? safeHttpUrl(product.imageUrl) : "";
-    const orderItem = orderItems.find((item) => item.key === product.key);
+    const orderItem = orderItemsByKey.get(product.key);
 
     return (
       <article key={product.key} className="overflow-hidden rounded-2xl bg-black/[0.035]">
@@ -1022,10 +1052,10 @@ export function ProfileCard({
                         <textarea
                           value={item.note}
                           onChange={(event) => updateOrderNote(item.key, event.target.value)}
-                          maxLength={140}
+                          maxLength={100}
                           rows={2}
                           placeholder="Ej. sin cebolla"
-                          className="w-full resize-y rounded-xl border border-[#dfe5dd] px-3 py-2 text-sm font-normal text-[#202b23] outline-none placeholder:text-[#a0a9a0] focus:border-[#78927d] focus:ring-2 focus:ring-[#78927d]/15"
+                          className="w-full resize-y rounded-xl border border-[#dfe5dd] px-3 py-2 text-base font-normal text-[#202b23] outline-none placeholder:text-[#a0a9a0] focus:border-[#78927d] focus:ring-2 focus:ring-[#78927d]/15"
                         />
                       </label>
                     </div>
@@ -1063,14 +1093,6 @@ export function ProfileCard({
               </div>
             ) : (
               <div className="flex flex-wrap justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={clearOrder}
-                  disabled={orderItems.length === 0}
-                  className="min-h-11 rounded-xl border border-[#dfe5dd] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Vaciar pedido
-                </button>
                 <button
                   type="button"
                   onClick={() => setOrderOpen(false)}

@@ -109,7 +109,7 @@ export function PublicCardPage() {
             client
               .from("menu_productos")
               .select(
-                "id,producto,precio,descripcion,categoria,imagen_url,activo,orden,en_promocion,precio_promocion,etiqueta_promocion",
+                "id,producto,precio,descripcion,categoria,imagen_url,orden,en_promocion,precio_promocion,etiqueta_promocion",
               )
               .eq("tarjeta_slug", slug)
               .eq("activo", true)
@@ -117,7 +117,7 @@ export function PublicCardPage() {
             client
               .from("menu_promociones")
               .select(
-                "id,titulo,descuento,descripcion,precio_anterior,precio,imagen_url,vigencia,activo",
+                "id,titulo,descuento,descripcion,precio_anterior,precio,imagen_url,vigencia",
               )
               .eq("tarjeta_slug", slug)
               .eq("activo", true)
@@ -139,7 +139,7 @@ export function PublicCardPage() {
             price: String(product.precio ?? ""),
             description: product.descripcion ?? "",
             category: product.categoria ?? "",
-            active: product.activo,
+            active: true,
             order: product.orden,
             onPromotion: product.en_promocion === true,
             promotionPrice: product.precio_promocion == null ? "" : String(product.precio_promocion),
@@ -155,7 +155,7 @@ export function PublicCardPage() {
             price: promotion.precio == null ? "" : String(promotion.precio),
             imageUrl: promotion.imagen_url ?? "",
             validity: promotion.vigencia ?? "",
-            active: promotion.activo,
+            active: true,
           }));
           setTarjeta((current) =>
             current
