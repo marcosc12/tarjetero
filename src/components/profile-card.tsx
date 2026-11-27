@@ -82,6 +82,51 @@ type MenuOrderItem = {
   note: string;
 };
 
+type PersistedMenuOrder = {
+  items: MenuOrderItem[];
+  ready: boolean;
+};
+
+function isMenuOrderItem(value: unknown): value is MenuOrderItem {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "key" in value &&
+    typeof value.key === "string" &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    "imageUrl" in value &&
+    typeof value.imageUrl === "string" &&
+    "price" in value &&
+    typeof value.price === "string" &&
+    "quantity" in value &&
+    typeof value.quantity === "number" &&
+    Number.isInteger(value.quantity) &&
+    value.quantity > 0 &&
+    "note" in value &&
+    typeof value.note === "string" &&
+    value.note.length <= 100
+  );
+}
+
+function parsePersistedMenuOrder(value: string | null): PersistedMenuOrder {
+  if (!value) return { items: [], ready: false };
+  const parsed: unknown = JSON.parse(value);
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("items" in parsed) ||
+    !Array.isArray(parsed.items) ||
+    !parsed.items.every(isMenuOrderItem)
+  ) {
+    throw new Error("El pedido guardado no tiene un formato válido.");
+  }
+  return {
+    items: parsed.items,
+    ready: "ready" in parsed && parsed.ready === true && parsed.items.length > 0,
+  };
+}
+
 function safeHttpUrl(value: string) {
   try {
     const url = new URL(value);
@@ -257,6 +302,9 @@ export function ProfileCard({
   const [orderItems, setOrderItems] = useState<MenuOrderItem[]>([]);
   const [orderOpen, setOrderOpen] = useState(false);
   const [orderReady, setOrderReady] = useState(false);
+  const [orderLoadedSlug, setOrderLoadedSlug] = useState("");
+  const [orderStorageMessage, setOrderStorageMessage] = useState("");
+  const orderStorageKey = `tarjetero:menu-order:${tarjeta.slug}`;
   const productsSectionRef = useRef<HTMLDivElement>(null);
   const hasActiveMenu =
     tarjeta.hasActiveMenu ??
@@ -388,6 +436,57 @@ export function ProfileCard({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [orderOpen]);
+
+  useEffect(() => {
+    if (!menuView) return;
+    let active = true;
+    Promise.resolve()
+      .then(() =>
+        parsePersistedMenuOrder(window.localStorage.getItem(orderStorageKey)),
+      )
+      .then((savedOrder) => {
+        if (!active) return;
+        setOrderItems(savedOrder.items);
+        setOrderReady(savedOrder.ready);
+        setOrderStorageMessage("");
+        setOrderLoadedSlug(tarjeta.slug);
+      })
+      .catch(() => {
+        if (!active) return;
+        setOrderItems([]);
+        setOrderReady(false);
+        setOrderStorageMessage("No se pudo recuperar el pedido guardado en este dispositivo.");
+        setOrderLoadedSlug(tarjeta.slug);
+      });
+    return () => {
+      active = false;
+    };
+  }, [menuView, orderStorageKey, tarjeta.slug]);
+
+  useEffect(() => {
+    if (!menuView || orderLoadedSlug !== tarjeta.slug) return;
+    let active = true;
+    Promise.resolve()
+      .then(() => {
+        if (orderItems.length === 0) {
+          window.localStorage.removeItem(orderStorageKey);
+        } else {
+          const savedOrder: PersistedMenuOrder = { items: orderItems, ready: orderReady };
+          window.localStorage.setItem(orderStorageKey, JSON.stringify(savedOrder));
+        }
+      })
+      .then(() => {
+        if (active) setOrderStorageMessage("");
+      })
+      .catch(() => {
+        if (active) {
+          setOrderStorageMessage("No se pudo guardar el pedido en este dispositivo.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [menuView, orderItems, orderReady, orderLoadedSlug, orderStorageKey, tarjeta.slug]);
 
   function changeProductPage(nextPage: number) {
     setProductPageState({ slug: tarjeta.slug, page: nextPage });
@@ -935,6 +1034,11 @@ export function ProfileCard({
             </button>
           </header>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+            {orderStorageMessage && (
+              <p role="status" className="rounded-xl bg-[#fbf6f7] px-3 py-2 text-sm text-[#806b70]">
+                {orderStorageMessage}
+              </p>
+            )}
             {orderReady ? (
               <>
                 <p role="status" className="rounded-2xl bg-[#f4f6f3] px-4 py-3 text-center text-sm font-medium text-[#526254]">
@@ -955,17 +1059,17 @@ export function ProfileCard({
                         <Image
                           src={imageUrl}
                           alt=""
-                          width={64}
-                          height={64}
+                          width={80}
+                          height={80}
                           unoptimized
-                          className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                          className="h-20 w-20 shrink-0 rounded-xl object-cover"
                         />
                       ) : (
-                        <div aria-hidden="true" className="h-16 w-16 shrink-0 rounded-xl bg-[#f0f2ef]" />
+                        <div aria-hidden="true" className="h-20 w-20 shrink-0 rounded-xl bg-[#f0f2ef]" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <h3 className="break-words font-semibold">{item.name}</h3>
-                        <p className="mt-1 text-sm text-[#526254]">
+                        <h3 className="break-words text-base font-semibold sm:text-lg">{item.name}</h3>
+                        <p className="mt-1 text-base text-[#526254]">
                           {item.quantity} × {item.price ? `$${item.price}` : "Precio no disponible"}
                           <span className="px-1.5">·</span>
                           {itemTotal}
@@ -998,19 +1102,19 @@ export function ProfileCard({
                       <Image
                         src={imageUrl}
                         alt=""
-                        width={64}
-                        height={64}
+                        width={80}
+                        height={80}
                         unoptimized
-                        className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                        className="h-20 w-20 shrink-0 rounded-xl object-cover"
                       />
                     ) : (
-                      <div aria-hidden="true" className="h-16 w-16 shrink-0 rounded-xl bg-[#f0f2ef]" />
+                      <div aria-hidden="true" className="h-20 w-20 shrink-0 rounded-xl bg-[#f0f2ef]" />
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="break-words font-semibold">{item.name}</h3>
-                          <p className="mt-1 text-sm text-[#526254]">
+                          <h3 className="break-words text-base font-semibold sm:text-lg">{item.name}</h3>
+                          <p className="mt-1 text-base text-[#526254]">
                             {item.price ? `$${item.price} c/u` : "Precio no disponible"}
                             <span className="px-1.5">·</span>
                             {itemTotal}
@@ -1019,7 +1123,7 @@ export function ProfileCard({
                         <button
                           type="button"
                           onClick={() => removeOrderItem(item.key)}
-                          className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#a15a5f] hover:bg-[#fbf6f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                          className="shrink-0 rounded-lg px-3 py-2 text-base font-medium text-[#a15a5f] hover:bg-[#fbf6f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                           Quitar
                         </button>
@@ -1030,18 +1134,18 @@ export function ProfileCard({
                           aria-label={`Restar una unidad de ${item.name}`}
                           onClick={() => updateOrderQuantity(item.key, -1)}
                           disabled={item.quantity <= 1}
-                          className="grid h-9 w-9 place-items-center rounded-lg border border-[#dfe5dd] text-lg disabled:cursor-not-allowed disabled:opacity-40"
+                          className="grid h-10 w-10 place-items-center rounded-lg border border-[#dfe5dd] text-xl disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           −
                         </button>
-                        <span aria-live="polite" className="min-w-6 text-center text-sm font-semibold">
+                        <span aria-live="polite"                         className="min-w-6 text-center text-base font-semibold">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           aria-label={`Agregar una unidad de ${item.name}`}
                           onClick={() => updateOrderQuantity(item.key, 1)}
-                          className="grid h-9 w-9 place-items-center rounded-lg text-lg font-semibold text-white"
+                          className="grid h-10 w-10 place-items-center rounded-lg text-xl font-semibold text-white"
                           style={{ backgroundColor: buttonColor }}
                         >
                           +
@@ -1066,7 +1170,7 @@ export function ProfileCard({
           </div>
           <footer className="grid gap-3 border-t border-[#e8ece6] p-4 sm:p-5">
             {orderItems.length > 0 && (
-              <div className="flex items-center justify-between gap-3 text-base font-semibold">
+              <div className="flex items-center justify-between gap-3 text-lg font-semibold">
                 <span>Total estimado</span>
                 <span>
                   {hasEstimatedTotal ? `$${estimatedTotal.toFixed(2)}` : "No disponible"}
@@ -1078,14 +1182,14 @@ export function ProfileCard({
                 <button
                   type="button"
                   onClick={() => setOrderReady(false)}
-                  className="min-h-11 rounded-xl border border-[#dfe5dd] px-4 py-2 text-sm font-semibold"
+                  className="min-h-14 rounded-xl border border-[#dfe5dd] px-5 py-3 text-base font-semibold"
                 >
                   Editar pedido
                 </button>
                 <button
                   type="button"
                   onClick={() => setOrderOpen(false)}
-                  className="min-h-11 rounded-xl px-4 py-2 text-sm font-semibold text-white"
+                  className="min-h-14 rounded-xl px-5 py-3 text-base font-semibold text-white"
                   style={{ backgroundColor: buttonColor }}
                 >
                   Seguir viendo el menú
@@ -1096,7 +1200,7 @@ export function ProfileCard({
                 <button
                   type="button"
                   onClick={() => setOrderOpen(false)}
-                  className="min-h-11 rounded-xl border border-[#dfe5dd] px-4 py-2 text-sm font-semibold"
+                  className="min-h-14 rounded-xl border border-[#dfe5dd] px-5 py-3 text-base font-semibold"
                 >
                   Seguir viendo el menú
                 </button>
@@ -1104,7 +1208,7 @@ export function ProfileCard({
                   type="button"
                   onClick={() => setOrderReady(true)}
                   disabled={orderItems.length === 0}
-                  className="min-h-11 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  className="min-h-14 rounded-xl px-5 py-3 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
                   style={{ backgroundColor: buttonColor }}
                 >
                   Listo para confirmar con el mesero
