@@ -103,7 +103,7 @@ export function PublicCardPage() {
         });
         setStatus("ready");
 
-        if (showMenu) {
+        if (showMenu && data.activo === true) {
           setMenuLoading(true);
           const [productsResult, promotionsResult] = await Promise.all([
             client
@@ -168,7 +168,7 @@ export function PublicCardPage() {
               : current,
           );
           setMenuLoading(false);
-        } else if (data.mostrar_menu !== false) {
+        } else if (!showMenu && data.activo === true && data.mostrar_menu !== false) {
           const [productsResult, promotionsResult] = await Promise.all([
             client
               .from("menu_productos")

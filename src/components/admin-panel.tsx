@@ -32,6 +32,8 @@ const BASE_MENU_CATEGORIES = ["Desayunos", "Plato fuerte", "Cena", "Bebidas", "P
 type FormValues = {
   slug: string;
   nombre: string;
+  cliente_nombre: string;
+  cliente_telefono: string;
   eslogan: string;
   inicial: string;
   avatar_url: string;
@@ -54,6 +56,8 @@ const defaultLinks: TarjetaLink[] = [
 const emptyForm = (): FormValues => ({
   slug: "",
   nombre: "",
+  cliente_nombre: "",
+  cliente_telefono: "",
   eslogan: "",
   inicial: "",
   avatar_url: "",
@@ -520,6 +524,8 @@ export function AdminPanel() {
     setForm({
       slug: card.slug,
       nombre: card.nombre ?? "",
+      cliente_nombre: card.cliente_nombre ?? "",
+      cliente_telefono: card.cliente_telefono ?? "",
       eslogan: card.eslogan ?? "",
       inicial: card.inicial ?? "",
       avatar_url: card.avatar_url ?? "",
@@ -693,6 +699,8 @@ export function AdminPanel() {
     const payload: Partial<Tarjeta> = {
       slug: form.slug.trim(),
       nombre: form.nombre.trim(),
+      cliente_nombre: form.cliente_nombre.trim() || null,
+      cliente_telefono: form.cliente_telefono.trim() || null,
       eslogan: form.eslogan.trim() || null,
       inicial: form.inicial.trim() || null,
       avatar_url: form.avatar_url.trim() || null,
@@ -1347,6 +1355,8 @@ export function AdminPanel() {
                         <input name="inicial" value={form.inicial} onChange={(event) => updateField("inicial", event.target.value.slice(0, 2))} maxLength={2} placeholder="C" className={inputClass} />
                       </label>
                       <label className={`${labelClass} sm:col-span-2`}>Nombre<input name="nombre" value={form.nombre} onChange={(event) => updateField("nombre", event.target.value)} required className={inputClass} /></label>
+                      <label className={labelClass}>Cliente / Dueño<input name="cliente_nombre" value={form.cliente_nombre} onChange={(event) => updateField("cliente_nombre", event.target.value)} className={inputClass} /></label>
+                      <label className={labelClass}>Teléfono<input name="cliente_telefono" type="tel" value={form.cliente_telefono} onChange={(event) => updateField("cliente_telefono", event.target.value)} className={inputClass} /></label>
                       <label className={`${labelClass} sm:col-span-2`}>Descripción / eslogan<textarea name="eslogan" value={form.eslogan} onChange={(event) => updateField("eslogan", event.target.value)} rows={2} className={inputClass} /></label>
                       <label className={`${labelClass} sm:col-span-2`}>URL de imagen del avatar (opcional)<input name="avatar_url" type="url" value={form.avatar_url} onChange={(event) => updateField("avatar_url", event.target.value)} placeholder="https://..." className={inputClass} /></label>
                       <label className="flex min-h-11 items-center justify-between gap-4 rounded-xl border border-[#e8ece6] bg-[#fbfcfa] px-3 sm:col-span-2">

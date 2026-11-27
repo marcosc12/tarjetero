@@ -12,6 +12,8 @@ function normalizeCategory(category: string) {
 export type Tarjeta = {
   slug: string;
   nombre: string | null;
+  cliente_nombre?: string | null;
+  cliente_telefono?: string | null;
   eslogan: string | null;
   inicial: string | null;
   avatar_url?: string | null;
@@ -319,7 +321,12 @@ export function ProfileCard({
   const hasActiveMenu =
     tarjeta.hasActiveMenu ??
     (products.some((product) => product.active) || promotions.some((promotion) => promotion.active));
-  const showMenuButton = tarjeta.mostrar_menu !== false && hasActiveMenu;
+  const showMenuButton = tarjeta.activo === true && tarjeta.mostrar_menu !== false && hasActiveMenu;
+  const suspendedNotice = (
+    <div role="status" className="card-suspended mt-7 rounded-2xl border border-[#f0e5e8] bg-[#fbf6f7] px-5 py-4 text-sm leading-6 text-[#806b70]">
+      Servicio temporalmente suspendido. Contacta al administrador para reactivarlo.
+    </div>
+  );
   const menuHref = `/?c=${encodeURIComponent(tarjeta.slug)}&view=menu`;
   const visibleProducts = useMemo(
     () => products.filter((product) => previewMode || product.active),
@@ -684,11 +691,8 @@ export function ProfileCard({
             </p>
           )}
         </div>
-      ) : (
-        <div className="card-suspended mt-7 rounded-2xl border border-[#f0e5e8] bg-[#fbf6f7] px-5 py-4 text-sm leading-6 text-[#806b70]">
-          Servicio temporalmente suspendido. Contacta al administrador para reactivarlo.
-        </div>
-      )}
+      ) : suspendedNotice}
+      {menuView && tarjeta.activo !== true && suspendedNotice}
       {!menuView && showMenuButton && (
         <a
           href={menuHref}
@@ -701,7 +705,7 @@ export function ProfileCard({
           </svg>
         </a>
       )}
-      {menuView && carouselItems.length > 0 && (
+      {menuView && tarjeta.activo === true && carouselItems.length > 0 && (
         <section
           aria-label="Promociones y productos en descuento"
           className="mt-8 text-left"
@@ -839,7 +843,7 @@ export function ProfileCard({
           </nav>
         </section>
       )}
-      {menuView && visibleProducts.length > 0 && (
+      {menuView && tarjeta.activo === true && visibleProducts.length > 0 && (
         <div ref={productsSectionRef} className="mt-7 scroll-mt-5 text-left">
           <nav aria-label="Filtrar productos por categoría" className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[{ key: "all", name: "Todos" }, ...categoryOptions].map(({ key, name }) => {
@@ -903,14 +907,14 @@ export function ProfileCard({
           )}
         </div>
       )}
-      {menuView && menuLoading && visibleProducts.length === 0 && (
+      {menuView && tarjeta.activo === true && menuLoading && visibleProducts.length === 0 && (
         <p role="status" className="mt-7 text-left text-sm opacity-70">
           Cargando productos...
         </p>
       )}
-      {menuView && <div aria-hidden="true" className="h-16" />}
+      {menuView && tarjeta.activo === true && <div aria-hidden="true" className="h-16" />}
     </section>
-    {menuView && typeof document !== "undefined" && createPortal(
+    {menuView && tarjeta.activo === true && typeof document !== "undefined" && createPortal(
       <button
         type="button"
         onClick={() => setOrderOpen(true)}
@@ -921,7 +925,7 @@ export function ProfileCard({
       </button>,
       document.body,
     )}
-    {lightboxItem && typeof document !== "undefined" && createPortal(
+    {tarjeta.activo === true && lightboxItem && typeof document !== "undefined" && createPortal(
       <div
         role="presentation"
         onClick={() => setLightboxItem(null)}
@@ -1016,7 +1020,7 @@ export function ProfileCard({
       </div>,
       document.body,
     )}
-    {orderOpen && typeof document !== "undefined" && createPortal(
+    {tarjeta.activo === true && orderOpen && typeof document !== "undefined" && createPortal(
       <div
         role="presentation"
         onClick={() => setOrderOpen(false)}
