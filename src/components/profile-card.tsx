@@ -136,6 +136,16 @@ function safeHttpUrl(value: string) {
   }
 }
 
+function safeImageUrl(value: string) {
+  const imageUrl = value.trim();
+  try {
+    const url = new URL(imageUrl);
+    return url.protocol === "https:" || url.protocol === "http:" ? imageUrl : "";
+  } catch {
+    return "";
+  }
+}
+
 function formatDiscount(value: string) {
   const discount = value.trim();
   return /^\d+(?:[.,]\d+)?$/.test(discount) ? `${discount}% OFF` : discount || "Descuento";
@@ -393,6 +403,7 @@ export function ProfileCard({
   const totalPromos = carouselItems.length;
   const currentPromoIndex = indicePromo % Math.max(1, totalPromos);
   const currentPromo = carouselItems[currentPromoIndex];
+  const currentPromoImage = currentPromo ? safeImageUrl(currentPromo.item.imageUrl) : "";
   const orderItemsByKey = useMemo(
     () => new Map<string, MenuOrderItem>(orderItems.map((item): [string, MenuOrderItem] => [item.key, item])),
     [orderItems],
@@ -544,7 +555,7 @@ export function ProfileCard({
   }
 
   function renderProduct(product: MenuProduct) {
-    const imageUrl = product.imageUrl ? safeHttpUrl(product.imageUrl) : "";
+    const imageUrl = product.imageUrl ? safeImageUrl(product.imageUrl) : "";
     const orderItem = orderItemsByKey.get(product.key);
 
     return (
@@ -558,7 +569,11 @@ export function ProfileCard({
               sizes="(max-width: 640px) 100vw, 24rem"
               loading="lazy"
               unoptimized
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
               className="object-cover"
+              style={{ objectFit: "cover" }}
             />
           )}
         </div>
@@ -699,7 +714,7 @@ export function ProfileCard({
           </div>
           <div className="relative min-w-0">
             {currentPromo && (
-              <div className="relative w-full">
+              <div className="relative h-full w-full">
                 <article
                   key={`${currentPromo.kind}-${currentPromo.item.key}`}
                   aria-live="polite"
@@ -713,21 +728,26 @@ export function ProfileCard({
                     }
                   }}
                   className="relative h-[240px] w-full cursor-pointer overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(20,30,20,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                  style={{ backgroundColor: currentPromo.item.imageUrl && safeHttpUrl(currentPromo.item.imageUrl) ? "#202a24" : buttonColor }}
+                  style={{ backgroundColor: currentPromoImage ? "#202a24" : buttonColor }}
                 >
-                {currentPromo.item.imageUrl && safeHttpUrl(currentPromo.item.imageUrl) && (
+                {currentPromoImage && (
                   <Image
-                    src={safeHttpUrl(currentPromo.item.imageUrl)}
+                    src={currentPromoImage}
                     alt={currentPromo.kind === "promotion"
                       ? currentPromo.item.title || "Imagen de promoción"
                       : currentPromo.item.name || "Producto en promoción"}
-                    width={1280}
-                    height={720}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 24rem"
+                    loading="eager"
                     unoptimized
-                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                    className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover"
+                    style={{ objectFit: "cover" }}
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
+                <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
                 {currentPromo.kind === "promotion" && (
                   <span className="absolute right-3 top-3 z-10 inline-flex -rotate-3 items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-extrabold text-white shadow-lg sm:right-4 sm:top-4">
                     <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -934,18 +954,18 @@ export function ProfileCard({
           </button>
           <div className="grid gap-5 pt-8 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] sm:items-start sm:pt-2">
             <div className="relative flex min-h-48 items-center justify-center overflow-hidden rounded-2xl bg-[#f4f5f2] sm:min-h-72">
-              {lightboxItem.kind === "promotion" && safeHttpUrl(lightboxItem.item.imageUrl) ? (
+              {lightboxItem.kind === "promotion" && safeImageUrl(lightboxItem.item.imageUrl) ? (
                 <Image
-                  src={safeHttpUrl(lightboxItem.item.imageUrl)}
+                  src={safeImageUrl(lightboxItem.item.imageUrl)}
                   alt={lightboxItem.item.title || "Imagen de promoción"}
                   width={800}
                   height={600}
                   unoptimized
                   className="max-h-[55vh] w-full object-contain"
                 />
-              ) : lightboxItem.kind === "product" && safeHttpUrl(lightboxItem.item.imageUrl) ? (
+              ) : lightboxItem.kind === "product" && safeImageUrl(lightboxItem.item.imageUrl) ? (
                 <Image
-                  src={safeHttpUrl(lightboxItem.item.imageUrl)}
+                  src={safeImageUrl(lightboxItem.item.imageUrl)}
                   alt={lightboxItem.item.name || "Producto en promoción"}
                   width={800}
                   height={600}
@@ -1045,7 +1065,7 @@ export function ProfileCard({
                   Tu pedido está listo para confirmar con el mesero.
                 </p>
                 {orderItems.map((item) => {
-                  const imageUrl = item.imageUrl ? safeHttpUrl(item.imageUrl) : "";
+                  const imageUrl = item.imageUrl ? safeImageUrl(item.imageUrl) : "";
                   const unitPrice = Number(item.price);
                   const itemTotal =
                     item.price.trim() !== "" && Number.isFinite(unitPrice)
@@ -1088,7 +1108,7 @@ export function ProfileCard({
               </p>
             ) : (
               orderItems.map((item) => {
-                const imageUrl = item.imageUrl ? safeHttpUrl(item.imageUrl) : "";
+                const imageUrl = item.imageUrl ? safeImageUrl(item.imageUrl) : "";
                 const unitPrice = Number(item.price);
                 const hasNumericPrice = item.price.trim() !== "" && Number.isFinite(unitPrice);
                 const itemTotal = hasNumericPrice
