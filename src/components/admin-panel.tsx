@@ -176,6 +176,19 @@ function normalizeCategory(category: string) {
   return category.trim().replace(/\s+/g, " ").toLocaleLowerCase("es");
 }
 
+function isPersistentImageUrl(value: string) {
+  try {
+    const url = new URL(value.trim());
+    return (
+      (url.protocol === "https:" || url.protocol === "http:") &&
+      !url.pathname.includes("/storage/v1/object/sign/") &&
+      !url.searchParams.has("token")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function AdminPanel() {
   const [client, setClient] = useState<SupabaseBrowserClient | null>(null);
   const [authorized, setAuthorized] = useState(false);
@@ -745,10 +758,15 @@ export function AdminPanel() {
       return;
     }
     const { data: publicUrl } = client.storage.from("menu-imagenes").getPublicUrl(data.path);
+    const imageUrl = publicUrl.publicUrl.trim();
+    if (!isPersistentImageUrl(imageUrl)) {
+      setFormMessage("Supabase no devolvió una URL pública persistente para la imagen.");
+      return;
+    }
     if (itemType === "product") {
-      updateProduct(itemKey, "imageUrl", publicUrl.publicUrl);
+      updateProduct(itemKey, "imageUrl", imageUrl);
     } else {
-      updatePromotion(itemKey, "imageUrl", publicUrl.publicUrl);
+      updatePromotion(itemKey, "imageUrl", imageUrl);
     }
     setFormMessage("Imagen subida correctamente.");
   }
@@ -828,6 +846,11 @@ export function AdminPanel() {
       setFormMessage("La promoción debe tener título y descuento; los precios, si se indican, deben ser numéricos y no negativos.");
       return;
     }
+    if (promotion.imageUrl.trim() && !isPersistentImageUrl(promotion.imageUrl)) {
+      setBusy(false);
+      setFormMessage("La imagen debe tener una URL HTTP(S) persistente. Vuelve a subirla antes de guardar la promoción.");
+      return;
+    }
 
     const promotionValues = {
       tarjeta_slug: editing.slug,
@@ -893,6 +916,13 @@ export function AdminPanel() {
     );
     if (invalidProduct) {
       setFormMessage("Cada producto debe tener nombre y un precio numérico válido.");
+      return;
+    }
+    const invalidPromotionImage = promotions.find(
+      (promotion) => promotion.imageUrl.trim() !== "" && !isPersistentImageUrl(promotion.imageUrl),
+    );
+    if (invalidPromotionImage) {
+      setFormMessage("La imagen de cada promoción debe tener una URL HTTP(S) persistente. Vuelve a subirla antes de guardar.");
       return;
     }
     const invalidPromotion = promotions.find(

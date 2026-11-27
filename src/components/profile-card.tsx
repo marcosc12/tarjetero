@@ -728,25 +728,16 @@ export function ProfileCard({
                     }
                   }}
                   className="relative h-[240px] w-full cursor-pointer overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(20,30,20,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                  style={{ backgroundColor: currentPromoImage ? "#202a24" : buttonColor }}
+                  style={{
+                    backgroundColor: currentPromoImage ? "#202a24" : buttonColor,
+                    backgroundImage: currentPromoImage
+                      ? `url(${JSON.stringify(currentPromoImage)})`
+                      : undefined,
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: "cover",
+                  }}
                 >
-                {currentPromoImage && (
-                  <Image
-                    src={currentPromoImage}
-                    alt={currentPromo.kind === "promotion"
-                      ? currentPromo.item.title || "Imagen de promoción"
-                      : currentPromo.item.name || "Producto en promoción"}
-                    fill
-                    sizes="(max-width: 640px) 100vw, 24rem"
-                    loading="eager"
-                    unoptimized
-                    onError={(event) => {
-                      event.currentTarget.style.display = "none";
-                    }}
-                    className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover"
-                    style={{ objectFit: "cover" }}
-                  />
-                )}
                 <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
                 {currentPromo.kind === "promotion" && (
                   <span className="absolute right-3 top-3 z-10 inline-flex -rotate-3 items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-extrabold text-white shadow-lg sm:right-4 sm:top-4">
