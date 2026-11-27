@@ -76,6 +76,7 @@ type CarouselItem =
 type MenuOrderItem = {
   key: string;
   name: string;
+  imageUrl: string;
   price: string;
   quantity: number;
   note: string;
@@ -319,6 +320,13 @@ export function ProfileCard({
   const currentPromoIndex = indicePromo % Math.max(1, totalPromos);
   const currentPromo = carouselItems[currentPromoIndex];
   const orderCount = orderItems.reduce((total, item) => total + item.quantity, 0);
+  const hasEstimatedTotal =
+    orderItems.length > 0 &&
+    orderItems.every((item) => item.price.trim() !== "" && Number.isFinite(Number(item.price)));
+  const estimatedTotal = orderItems.reduce(
+    (total, item) => total + Number(item.price) * item.quantity,
+    0,
+  );
 
   useEffect(() => {
     if (totalPromos < 2) return;
@@ -368,7 +376,14 @@ export function ProfileCard({
       }
       return [
         ...current,
-        { key: product.key, name: product.name, price: product.price, quantity: 1, note: "" },
+        {
+          key: product.key,
+          name: product.name,
+          imageUrl: product.imageUrl,
+          price: product.price,
+          quantity: 1,
+          note: "",
+        },
       ];
     });
   }
@@ -890,12 +905,56 @@ export function ProfileCard({
             </button>
           </header>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
-            {orderItems.length === 0 ? (
+            {orderReady ? (
+              <>
+                <p role="status" className="rounded-2xl bg-[#f4f6f3] px-4 py-3 text-center text-sm font-medium text-[#526254]">
+                  Tu pedido está listo para confirmar con el mesero.
+                </p>
+                {orderItems.map((item) => {
+                  const imageUrl = item.imageUrl ? safeHttpUrl(item.imageUrl) : "";
+                  const unitPrice = Number(item.price);
+                  const itemTotal =
+                    item.price.trim() !== "" && Number.isFinite(unitPrice)
+                      ? `$${(unitPrice * item.quantity).toFixed(2)}`
+                      : item.price
+                        ? `$${item.price}`
+                        : "Precio no disponible";
+                  return (
+                    <article key={item.key} className="flex gap-3 rounded-2xl border border-[#e8ece6] p-3">
+                      {imageUrl ? (
+                        <Image
+                          src={imageUrl}
+                          alt=""
+                          width={64}
+                          height={64}
+                          unoptimized
+                          className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                        />
+                      ) : (
+                        <div aria-hidden="true" className="h-16 w-16 shrink-0 rounded-xl bg-[#f0f2ef]" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="break-words font-semibold">{item.name}</h3>
+                        <p className="mt-1 text-sm text-[#526254]">
+                          {item.quantity} × {item.price ? `$${item.price}` : "Precio no disponible"}
+                          <span className="px-1.5">·</span>
+                          {itemTotal}
+                        </p>
+                        {item.note.trim() && (
+                          <p className="mt-1 break-words text-xs text-[#788078]">Nota: {item.note}</p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </>
+            ) : orderItems.length === 0 ? (
               <p className="rounded-2xl bg-[#f4f6f3] px-4 py-6 text-center text-sm text-[#788078]">
                 Aún no agregas productos a tu pedido.
               </p>
             ) : (
               orderItems.map((item) => {
+                const imageUrl = item.imageUrl ? safeHttpUrl(item.imageUrl) : "";
                 const unitPrice = Number(item.price);
                 const hasNumericPrice = item.price.trim() !== "" && Number.isFinite(unitPrice);
                 const itemTotal = hasNumericPrice
@@ -904,88 +963,132 @@ export function ProfileCard({
                     ? `$${item.price}`
                     : "Precio no disponible";
                 return (
-                  <article key={item.key} className="rounded-2xl border border-[#e8ece6] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="break-words font-semibold">{item.name}</h3>
-                        <p className="mt-1 text-sm text-[#526254]">
-                          {item.price ? `$${item.price} c/u` : "Precio no disponible"}
-                          <span className="px-1.5">·</span>
-                          {itemTotal}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeOrderItem(item.key)}
-                        className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#a15a5f] hover:bg-[#fbf6f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                      >
-                        Quitar
-                      </button>
-                    </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <button
-                        type="button"
-                        aria-label={`Restar una unidad de ${item.name}`}
-                        onClick={() => updateOrderQuantity(item.key, -1)}
-                        disabled={item.quantity <= 1}
-                        className="grid h-9 w-9 place-items-center rounded-lg border border-[#dfe5dd] text-lg disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        −
-                      </button>
-                      <span aria-live="polite" className="min-w-6 text-center text-sm font-semibold">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={`Agregar una unidad de ${item.name}`}
-                        onClick={() => updateOrderQuantity(item.key, 1)}
-                        className="grid h-9 w-9 place-items-center rounded-lg text-lg font-semibold text-white"
-                        style={{ backgroundColor: buttonColor }}
-                      >
-                        +
-                      </button>
-                    </div>
-                    <label className="mt-3 grid gap-1.5 text-xs font-semibold text-[#526254]">
-                      Nota rápida (opcional)
-                      <textarea
-                        value={item.note}
-                        onChange={(event) => updateOrderNote(item.key, event.target.value)}
-                        maxLength={140}
-                        rows={2}
-                        placeholder="Ej. sin cebolla"
-                        className="w-full resize-y rounded-xl border border-[#dfe5dd] px-3 py-2 text-sm font-normal text-[#202b23] outline-none placeholder:text-[#a0a9a0] focus:border-[#78927d] focus:ring-2 focus:ring-[#78927d]/15"
+                  <article key={item.key} className="flex gap-3 rounded-2xl border border-[#e8ece6] p-3">
+                    {imageUrl ? (
+                      <Image
+                        src={imageUrl}
+                        alt=""
+                        width={64}
+                        height={64}
+                        unoptimized
+                        className="h-16 w-16 shrink-0 rounded-xl object-cover"
                       />
-                    </label>
+                    ) : (
+                      <div aria-hidden="true" className="h-16 w-16 shrink-0 rounded-xl bg-[#f0f2ef]" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="break-words font-semibold">{item.name}</h3>
+                          <p className="mt-1 text-sm text-[#526254]">
+                            {item.price ? `$${item.price} c/u` : "Precio no disponible"}
+                            <span className="px-1.5">·</span>
+                            {itemTotal}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeOrderItem(item.key)}
+                          className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#a15a5f] hover:bg-[#fbf6f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-label={`Restar una unidad de ${item.name}`}
+                          onClick={() => updateOrderQuantity(item.key, -1)}
+                          disabled={item.quantity <= 1}
+                          className="grid h-9 w-9 place-items-center rounded-lg border border-[#dfe5dd] text-lg disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          −
+                        </button>
+                        <span aria-live="polite" className="min-w-6 text-center text-sm font-semibold">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Agregar una unidad de ${item.name}`}
+                          onClick={() => updateOrderQuantity(item.key, 1)}
+                          className="grid h-9 w-9 place-items-center rounded-lg text-lg font-semibold text-white"
+                          style={{ backgroundColor: buttonColor }}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <label className="mt-3 grid gap-1.5 text-xs font-semibold text-[#526254]">
+                        Nota rápida (opcional)
+                        <textarea
+                          value={item.note}
+                          onChange={(event) => updateOrderNote(item.key, event.target.value)}
+                          maxLength={140}
+                          rows={2}
+                          placeholder="Ej. sin cebolla"
+                          className="w-full resize-y rounded-xl border border-[#dfe5dd] px-3 py-2 text-sm font-normal text-[#202b23] outline-none placeholder:text-[#a0a9a0] focus:border-[#78927d] focus:ring-2 focus:ring-[#78927d]/15"
+                        />
+                      </label>
+                    </div>
                   </article>
                 );
               })
             )}
           </div>
           <footer className="grid gap-3 border-t border-[#e8ece6] p-4 sm:p-5">
-            {orderReady && (
-              <p role="status" className="text-center text-sm text-[#526254]">
-                Tu pedido está listo para confirmar con el mesero.
-              </p>
+            {orderItems.length > 0 && (
+              <div className="flex items-center justify-between gap-3 text-base font-semibold">
+                <span>Total estimado</span>
+                <span>
+                  {hasEstimatedTotal ? `$${estimatedTotal.toFixed(2)}` : "No disponible"}
+                </span>
+              </div>
             )}
-            <div className="flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={clearOrder}
-                disabled={orderItems.length === 0}
-                className="min-h-11 rounded-xl border border-[#dfe5dd] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Vaciar pedido
-              </button>
-              <button
-                type="button"
-                onClick={() => setOrderReady(true)}
-                disabled={orderItems.length === 0}
-                className="min-h-11 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
-                style={{ backgroundColor: buttonColor }}
-              >
-                Listo para confirmar con el mesero
-              </button>
-            </div>
+            {orderReady ? (
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOrderReady(false)}
+                  className="min-h-11 rounded-xl border border-[#dfe5dd] px-4 py-2 text-sm font-semibold"
+                >
+                  Editar pedido
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderOpen(false)}
+                  className="min-h-11 rounded-xl px-4 py-2 text-sm font-semibold text-white"
+                  style={{ backgroundColor: buttonColor }}
+                >
+                  Seguir viendo el menú
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={clearOrder}
+                  disabled={orderItems.length === 0}
+                  className="min-h-11 rounded-xl border border-[#dfe5dd] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Vaciar pedido
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderOpen(false)}
+                  className="min-h-11 rounded-xl border border-[#dfe5dd] px-4 py-2 text-sm font-semibold"
+                >
+                  Seguir viendo el menú
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderReady(true)}
+                  disabled={orderItems.length === 0}
+                  className="min-h-11 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{ backgroundColor: buttonColor }}
+                >
+                  Listo para confirmar con el mesero
+                </button>
+              </div>
+            )}
           </footer>
         </section>
       </div>,
