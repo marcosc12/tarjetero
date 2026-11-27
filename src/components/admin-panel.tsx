@@ -1486,11 +1486,13 @@ export function AdminPanel() {
                     )}
                   </div>
                   <div className="mt-5 overflow-x-auto">
-                    <table className="w-full min-w-[38rem] text-left text-sm">
+                    <table className="w-full min-w-[56rem] text-left text-sm">
                       <thead>
                         <tr className="border-b border-[#e8ece6] text-xs font-semibold uppercase tracking-wide text-[#788078]">
                           <th scope="col" className="px-3 py-3">LINK</th>
                           <th scope="col" className="px-3 py-3">NOMBRE DE LOCAL</th>
+                          <th scope="col" className="px-3 py-3">CLIENTE / DUEÑO</th>
+                          <th scope="col" className="px-3 py-3">TELÉFONO</th>
                           <th scope="col" className="px-3 py-3 text-center">ESTADO</th>
                           <th scope="col" className="px-3 py-3 text-right">ACCIÓN</th>
                         </tr>
@@ -1512,6 +1514,8 @@ export function AdminPanel() {
                         </a>
                       </td>
                       <td className="px-3 py-3 font-medium text-[#344437]">{card.nombre || card.slug}</td>
+                      <td className="px-3 py-3 text-[#526254]">{card.cliente_nombre?.trim() || "—"}</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-[#526254]">{card.cliente_telefono?.trim() || "—"}</td>
                       <td className="px-3 py-3 text-center">
                         <button
                           type="button"
