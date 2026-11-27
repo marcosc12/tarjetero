@@ -172,6 +172,19 @@ function promotionFromRecord(record: MenuPromotionRecord): MenuPromotion {
   };
 }
 
+function promotionSaveMatches(data: unknown, slug: string, active: boolean) {
+  if (typeof data !== "object" || data === null) return false;
+  return (
+    "id" in data &&
+    ((typeof data.id === "string" && data.id.trim() !== "") ||
+      (typeof data.id === "number" && Number.isFinite(data.id))) &&
+    "tarjeta_slug" in data &&
+    data.tarjeta_slug === slug &&
+    "activo" in data &&
+    data.activo === active
+  );
+}
+
 function normalizeCategory(category: string) {
   return category.trim().replace(/\s+/g, " ").toLocaleLowerCase("es");
 }
@@ -941,7 +954,11 @@ export function AdminPanel() {
 
     setBusy(true);
     setFormMessage("Guardando productos y promociones...");
-    const requests: Array<{ table: string; request: Promise<{ error: { message: string } | null }> }> = [];
+    const requests: Array<{
+      table: string;
+      request: Promise<{ data?: unknown; error: { message: string } | null }>;
+      verify?: (data: unknown) => boolean;
+    }> = [];
     const savedProductIds = products.flatMap((product) => product.id ? [product.id] : []);
     const savedPromotionIds = promotions.flatMap((promotion) => promotion.id ? [promotion.id] : []);
 
@@ -990,8 +1007,9 @@ export function AdminPanel() {
       requests.push({
         table: "menu_promociones",
         request: promotion.id
-          ? client.from("menu_promociones").update(values).eq("id", promotion.id).eq("tarjeta_slug", editing.slug)
-          : client.from("menu_promociones").insert(values),
+          ? client.from("menu_promociones").update(values).eq("id", promotion.id).eq("tarjeta_slug", editing.slug).select("*").single()
+          : client.from("menu_promociones").insert(values).select("*").single(),
+        verify: (data) => promotionSaveMatches(data, editing.slug, promotion.active),
       });
     });
     originalPromotionIds
@@ -1003,16 +1021,28 @@ export function AdminPanel() {
 
     let results;
     try {
-      results = await Promise.all(requests.map(async ({ table, request }) => ({ table, result: await request })));
+      results = await Promise.all(
+        requests.map(async ({ table, request, verify }) => ({
+          table,
+          result: await request,
+          verify,
+        })),
+      );
     } catch (error) {
       setBusy(false);
       setFormMessage(`No se pudieron guardar los cambios del menú: ${error instanceof Error ? error.message : "error desconocido"}. Verifica los datos en Supabase antes de volver a guardar.`);
       return;
     }
     setBusy(false);
-    const failures = results.filter(({ result }) => result.error);
+    const failures = results.filter(
+      ({ result, verify }) => result.error || (verify !== undefined && !verify(result.data)),
+    );
     if (failures.length) {
-      const details = failures.map(({ table, result }) => `${table}: ${result.error?.message}`).join("; ");
+      const details = failures
+        .map(({ table, result, verify }) =>
+          `${table}: ${result.error?.message || (verify ? "no se confirmó el ID del tarjetero o el estado activo guardado" : "error desconocido")}`,
+        )
+        .join("; ");
       setFormMessage(`No se pudieron guardar todos los cambios (${details}). Algunos cambios pueden haberse guardado; vuelve a cargar el menú para verificar.`);
       return;
     }

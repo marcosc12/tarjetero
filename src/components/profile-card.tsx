@@ -394,11 +394,11 @@ export function ProfileCard({
   const carouselItems: CarouselItem[] = useMemo(
     () => [
       ...promotions
-        .filter((promotion) => previewMode || promotion.active)
+        .filter((promotion) => promotion.active)
         .map((promotion) => ({ kind: "promotion" as const, item: promotion })),
       ...featuredProducts.map((product) => ({ kind: "product" as const, item: product })),
     ],
-    [featuredProducts, promotions, previewMode],
+    [featuredProducts, promotions],
   );
   const totalPromos = carouselItems.length;
   const currentPromoIndex = indicePromo % Math.max(1, totalPromos);
